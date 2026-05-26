@@ -59,7 +59,7 @@ jobs:
         run: npm test
 
       - name: Build backend for SonarQube
-        run: mvn -B compile -DskipTests
+        run: mvn -B test-compile -DskipTests
 
       - name: SonarCloud Scan for Backend
         uses: sonarsource/sonarcloud-github-action@v3
