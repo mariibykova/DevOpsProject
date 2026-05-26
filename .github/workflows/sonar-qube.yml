@@ -61,6 +61,7 @@ jobs:
         with:
           projectBaseDir: .
           args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
             -Dsonar.projectName=devops_project_backend
             -Dsonar.sources=src/main/java
@@ -84,6 +85,7 @@ jobs:
         with:
           projectBaseDir: frontend
           args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}_frontend
             -Dsonar.projectName=devops_project_frontend
             -Dsonar.sources=src
