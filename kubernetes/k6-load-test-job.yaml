@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-load-test
+  namespace: lab03
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:0.53.0
+          env:
+            - name: TARGET_BASE_URL
+              value: http://app.lab03.svc.cluster.local:8080
+          args:
+            - run
+            - /scripts/script.js
+            - --summary-export
+            - /results/k6-summary.json
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: results
+              mountPath: /results
+      volumes:
+        - name: scripts
+          configMap:
+            name: k6-load-test-script
+        - name: results
+          emptyDir: {}
