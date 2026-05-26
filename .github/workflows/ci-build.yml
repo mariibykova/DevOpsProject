@@ -58,6 +58,9 @@ jobs:
         working-directory: frontend
         run: npm test
 
+      - name: Build backend for SonarQube
+        run: ./mvnw -B compile
+
       - name: SonarCloud Scan for Backend
         uses: sonarsource/sonarcloud-github-action@v3
         env:
