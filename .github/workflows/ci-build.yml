@@ -59,7 +59,7 @@ jobs:
         run: npm test
 
       - name: Build backend for SonarQube
-        run: ./mvnw -B compile
+        run: mvn -B compile -DskipTests
 
       - name: SonarCloud Scan for Backend
         uses: sonarsource/sonarcloud-github-action@v3
@@ -157,11 +157,11 @@ jobs:
           cache: maven
 
       - name: Run tests and coverage
-        run: ./mvnw -B clean verify
+        run: mvn -B clean verify
 
       - name: Check code coverage threshold (80%)
         run: |
-          COVERAGE=$(./mvnw -B help:evaluate -Dexpression=jacoco.exec.instruction.coverage.ratio -q -DforceStdout 2>/dev/null | grep -v '^\[' | head -1)
+          COVERAGE=$(mvn -B help:evaluate -Dexpression=jacoco.exec.instruction.coverage.ratio -q -DforceStdout 2>/dev/null | grep -v '^\[' | head -1)
           if [ -z "$COVERAGE" ]; then
             COVERAGE=$(grep -oP 'instruction\ coverage="\K[0-9.]+' target/site/jacoco/jacoco.xml 2>/dev/null || echo "0")
           fi
@@ -233,7 +233,7 @@ jobs:
           cache: maven
 
       - name: Build JAR
-        run: ./mvnw -B clean package -DskipTests -Djacoco.skip=true
+        run: mvn -B clean package -DskipTests -Djacoco.skip=true
 
       - name: Upload backend JAR artifact
         uses: actions/upload-artifact@v7

@@ -54,7 +54,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Build backend for SonarQube
-        run: ./mvnw -B compile
+        run: mvn -B compile -DskipTests
 
       - name: SonarCloud Scan for Backend
         uses: sonarsource/sonarcloud-github-action@v3
@@ -141,7 +141,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Run OWASP Dependency Check (Backend)
-        run: ./mvnw -B org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+        run: mvn -B org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
 
       - name: Upload OWASP Report (Backend)
         if: always()
