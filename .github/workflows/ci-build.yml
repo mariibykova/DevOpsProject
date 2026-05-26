@@ -1,0 +1,714 @@
+name: CI Build Test VM
+
+on:
+  push:
+    branches:
+      - main
+      - Lab4
+  pull_request:
+    branches:
+      - main
+      - Lab4
+  workflow_dispatch:
+
+jobs:
+  sonar-qube:
+    name: SonarQube Security & Quality Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:devdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+      SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET_CI }}
+      SECURITY_JWT_EXPIRATION_MS: "3600000"
+      APP_ADMIN_USERNAME: admin
+      APP_ADMIN_EMAIL: admin@example.com
+      APP_ADMIN_PASSWORD: ${{ secrets.APP_ADMIN_PASSWORD_CI }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test
+
+      - name: SonarCloud Scan for Backend
+        uses: sonarsource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName=devops_project_backend
+            -Dsonar.sources=src/main/java
+            -Dsonar.tests=src/test/java
+            -Dsonar.java.binaries=target/classes
+            -Dsonar.java.test.binaries=target/test-classes
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.java.coveragePlugin=jacoco
+            -Dsonar.jacoco.reportPaths=target/jacoco.exec
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            -Dsonar.test.inclusions=src/test/java/**/*Test.java
+            -Dsonar.scm.provider=git
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+
+      - name: SonarCloud Scan for Frontend
+        uses: sonarsource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}_frontend
+        with:
+          projectBaseDir: frontend
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}_frontend
+            -Dsonar.projectName=devops_project_frontend
+            -Dsonar.sources=src
+            -Dsonar.tests=src/__tests__
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+
+      - name: Check Quality Gate Status
+        run: |
+          echo "SonarQube Quality Gate check completed"
+          echo "If this step runs, it means quality gates passed"
+
+      - name: Upload SonarQube Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonar-report
+          path: |
+            target/sonar/
+            frontend/coverage/
+          if-no-files-found: warn
+
+      - name: Send Telegram Notification - SonarQube
+        if: always()
+        run: |
+          if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            STATUS="${{ job.status == 'success' && 'PASSED' || 'FAILED' }}"
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -d "text=SonarQube Scan Results - Status: ${STATUS} - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+  backend-tests:
+    name: Run Tests (Java 21)
+    runs-on: ubuntu-latest
+    needs: sonar-qube
+    env:
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:devdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+      SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET_CI }}
+      SECURITY_JWT_EXPIRATION_MS: "3600000"
+      APP_ADMIN_USERNAME: admin
+      APP_ADMIN_EMAIL: admin@example.com
+      APP_ADMIN_PASSWORD: ${{ secrets.APP_ADMIN_PASSWORD_CI }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run tests and coverage
+        run: ./mvnw -B clean verify
+
+      - name: Check code coverage threshold (80%)
+        run: |
+          COVERAGE=$(./mvnw -B help:evaluate -Dexpression=jacoco.exec.instruction.coverage.ratio -q -DforceStdout 2>/dev/null | grep -v '^\[' | head -1)
+          if [ -z "$COVERAGE" ]; then
+            COVERAGE=$(grep -oP 'instruction\ coverage="\K[0-9.]+' target/site/jacoco/jacoco.xml 2>/dev/null || echo "0")
+          fi
+          COVERAGE_PCT=$(echo "$COVERAGE * 100" | bc 2>/dev/null || echo "0")
+          echo "Code coverage: ${COVERAGE_PCT}%"
+          if (( $(echo "$COVERAGE_PCT < 80" | bc -l 2>/dev/null || echo 1) )); then
+            echo "ERROR: Code coverage is below 80% threshold"
+            exit 1
+          fi
+          echo "Code coverage check passed"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: target/surefire-reports/
+          if-no-files-found: warn
+
+      - name: Upload code coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: code-coverage
+          path: target/site/jacoco/
+          if-no-files-found: warn
+
+  frontend-tests:
+    name: Run Frontend Tests
+    runs-on: ubuntu-latest
+    needs: sonar-qube
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test
+
+  build-backend-jar:
+    name: Build Backend JAR And Upload Artifact
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR
+        run: ./mvnw -B clean package -DskipTests -Djacoco.skip=true
+
+      - name: Upload backend JAR artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-jar
+          path: target/devops_project-*.jar
+          if-no-files-found: error
+
+  build-frontend:
+    name: Build Frontend And Upload Artifact
+    runs-on: ubuntu-latest
+    needs: frontend-tests
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload frontend dist artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          if-no-files-found: error
+
+  build-and-push-images:
+    name: Build Docker Images From Artifacts And Push To GHCR
+    runs-on: ubuntu-latest
+    needs: [build-backend-jar, build-frontend]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Download backend JAR artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-jar
+          path: target
+
+      - name: Download frontend dist artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-dist
+          path: frontend-dist
+
+      - name: Normalize backend artifact layout
+        run: |
+          mkdir -p target
+          JAR_PATH="$(find target -type f -name '*.jar' ! -name '*.jar.original' | head -n 1)"
+          if [ -z "$JAR_PATH" ]; then
+            echo "Backend JAR artifact not found"
+            exit 1
+          fi
+          cp "$JAR_PATH" target/app.jar
+
+      - name: Normalize frontend artifact layout
+        run: |
+          if [ -d frontend-dist/frontend/dist ]; then
+            cp -R frontend-dist/frontend/dist/. frontend-dist/
+          elif [ -d frontend-dist/dist ]; then
+            cp -R frontend-dist/dist/. frontend-dist/
+          fi
+          if [ ! -f frontend-dist/index.html ]; then
+            echo "Frontend dist artifact does not contain index.html"
+            exit 1
+          fi
+
+      - name: Create frontend runtime Dockerfile
+        run: |
+          cat > Dockerfile.frontend.artifact << 'EOF'
+          FROM nginx:1.29-alpine
+          COPY frontend-dist/ /usr/share/nginx/html/
+          COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+          EXPOSE 80
+          EOF
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image names
+        id: images
+        run: |
+          REPO_LOWER="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "backend=ghcr.io/${REPO_LOWER}" >> "$GITHUB_OUTPUT"
+          echo "frontend=ghcr.io/${REPO_LOWER}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract backend Docker metadata
+        id: backend_meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.images.outputs.backend }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Extract frontend Docker metadata
+        id: frontend_meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.images.outputs.frontend }}
+          tags: |
+            type=raw,value=frontend-sha-${{ github.sha }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.backend_meta.outputs.tags }}
+          labels: ${{ steps.backend_meta.outputs.labels }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile.frontend.artifact
+          push: true
+          tags: ${{ steps.frontend_meta.outputs.tags }}
+          labels: ${{ steps.frontend_meta.outputs.labels }}
+        
+  kubernetes:
+      name: Deploy to Kubernetes
+      needs: [build-and-push-images]
+      runs-on: ubuntu-latest
+      permissions:
+        contents: read
+        packages: read
+      env:
+        TF_VAR_twc_token: ${{ secrets.TF_VAR_TWC_TOKEN }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.TF_S3_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_S3_SECRET_KEY }}
+        TF_S3_BUCKET: ${{ secrets.TF_S3_BUCKET }}
+        GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+        POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET_PROD }}
+        APP_ADMIN_USERNAME: ${{ secrets.APP_ADMIN_USERNAME_PROD }}
+        APP_ADMIN_EMAIL: ${{ secrets.APP_ADMIN_EMAIL_PROD }}
+        APP_ADMIN_PASSWORD: ${{ secrets.APP_ADMIN_PASSWORD_PROD }}
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v5
+          with:
+            ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+        - name: Set up Terraform
+          uses: hashicorp/setup-terraform@v4
+
+        - name: Set up kubectl
+          uses: azure/setup-kubectl@v4
+
+        - name: Build kubeconfig from Terraform output
+          working-directory: terraform
+          run: |
+            terraform init -input=false -backend-config="bucket=${TF_S3_BUCKET}"
+            terraform output -raw kubeconfig > "$RUNNER_TEMP/kubeconfig"
+            chmod 600 "$RUNNER_TEMP/kubeconfig"
+            echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+        - name: Create namespace
+          run: kubectl apply -f kubernetes/namespace.yaml
+
+        - name: Install ingress-nginx controller
+          run: |
+            kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.3/deploy/static/provider/cloud/deploy.yaml
+            kubectl -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=240s
+
+        - name: Configure ingress-nginx
+          run: |
+            kubectl -n ingress-nginx patch deployment ingress-nginx-controller --type='merge' -p '{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}'
+            kubectl -n ingress-nginx patch service ingress-nginx-controller --type='merge' -p '{"spec":{"type":"ClusterIP"}}'
+            kubectl -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=240s
+
+        - name: Create or update image pull secret
+          run: |
+            if [ -z "$GHCR_PULL_TOKEN" ]; then
+              echo "GHCR_PULL_TOKEN secret is required to pull private images from GHCR in Kubernetes"
+              exit 1
+            fi
+            kubectl -n lab03 create secret docker-registry ghcr-creds \
+              --docker-server=ghcr.io \
+              --docker-username="${{ github.actor }}" \
+              --docker-password="$GHCR_PULL_TOKEN" \
+              --dry-run=client -o yaml | kubectl apply -f -
+
+        - name: Create or update application secrets
+          run: |
+            SPRING_DATASOURCE_URL="jdbc:postgresql://postgres.lab03.svc.cluster.local:5432/$POSTGRES_DB"
+            kubectl -n lab03 create secret generic app-secrets \
+              --from-literal=POSTGRES_DB="$POSTGRES_DB" \
+              --from-literal=POSTGRES_USER="$POSTGRES_USER" \
+              --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+              --from-literal=SPRING_DATASOURCE_URL="$SPRING_DATASOURCE_URL" \
+              --from-literal=SPRING_DATASOURCE_USERNAME="$POSTGRES_USER" \
+              --from-literal=SPRING_DATASOURCE_PASSWORD="$POSTGRES_PASSWORD" \
+              --from-literal=SECURITY_JWT_SECRET="$SECURITY_JWT_SECRET" \
+              --from-literal=APP_ADMIN_USERNAME="$APP_ADMIN_USERNAME" \
+              --from-literal=APP_ADMIN_EMAIL="$APP_ADMIN_EMAIL" \
+              --from-literal=APP_ADMIN_PASSWORD="$APP_ADMIN_PASSWORD" \
+              --dry-run=client -o yaml | kubectl apply -f -
+
+        - name: Resolve storage class for postgres PVC
+          id: storage
+          run: |
+            DEFAULT_SC=$(kubectl get storageclass -o jsonpath='{range .items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")]}{.metadata.name}{"\n"}{end}' | head -n1)
+            if [ -z "$DEFAULT_SC" ]; then
+              DEFAULT_SC=$(kubectl get storageclass -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+            fi
+            if [ -z "$DEFAULT_SC" ]; then
+              echo "No StorageClass found. Falling back to static PV with storageClassName=manual"
+              DEFAULT_SC="manual"
+              echo "use_static_pv=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "use_static_pv=false" >> "$GITHUB_OUTPUT"
+            fi
+            echo "Using StorageClass: $DEFAULT_SC"
+            echo "POSTGRES_STORAGE_CLASS=$DEFAULT_SC" >> "$GITHUB_ENV"
+
+        - name: Apply static PV fallback
+          if: ${{ steps.storage.outputs.use_static_pv == 'true' }}
+          run: kubectl apply -f kubernetes/postgres-pv.yaml
+
+        - name: Recreate pending PVC without storage class
+          run: |
+            CURRENT_PHASE=$(kubectl -n lab03 get pvc postgres-pvc -o jsonpath='{.status.phase}' 2>/dev/null || true)
+            CURRENT_SC=$(kubectl -n lab03 get pvc postgres-pvc -o jsonpath='{.spec.storageClassName}' 2>/dev/null || true)
+            if [ "$CURRENT_SC" = "<no value>" ]; then
+              CURRENT_SC=""
+            fi
+            if [ "$CURRENT_PHASE" = "Pending" ] && [ "$CURRENT_SC" != "$POSTGRES_STORAGE_CLASS" ]; then
+              echo "Deleting pending pvc/postgres-pvc (phase=$CURRENT_PHASE, storageClassName=$CURRENT_SC)"
+              kubectl -n lab03 delete pvc postgres-pvc --ignore-not-found=true
+            fi
+
+        - name: Apply postgres manifests
+          run: |
+            kubectl apply -f kubernetes/frontend-nginx-config.yaml
+            sed "s|__POSTGRES_STORAGE_CLASS__|$POSTGRES_STORAGE_CLASS|g" kubernetes/postgres.yaml | kubectl apply -f -
+
+        - name: Wait for postgres PVC to bind
+          run: kubectl -n lab03 wait --for=jsonpath='{.status.phase}'=Bound pvc/postgres-pvc --timeout=180s
+
+        - name: Wait for postgres rollout
+          run: kubectl -n lab03 rollout status deployment/postgres --timeout=360s
+
+        - name: Apply backend and frontend manifests
+          run: |
+            REPO_LOWER="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+            BACKEND_IMAGE="ghcr.io/${REPO_LOWER}:sha-${{ github.sha }}"
+            FRONTEND_IMAGE="ghcr.io/${REPO_LOWER}:frontend-sha-${{ github.sha }}"
+            sed "s|__BACKEND_IMAGE__|$BACKEND_IMAGE|g" kubernetes/backend.yaml | kubectl apply -f -
+            sed "s|__FRONTEND_IMAGE__|$FRONTEND_IMAGE|g" kubernetes/frontend.yaml | kubectl apply -f -
+            kubectl apply -f kubernetes/monitoring.yaml
+            kubectl -n lab03 rollout restart deployment/prometheus
+            kubectl -n lab03 rollout status deployment/prometheus --timeout=240s
+            kubectl apply -f kubernetes/ingress.yaml
+
+        - name: Wait for rollout
+          run: |
+            kubectl -n lab03 rollout status deployment/app --timeout=240s
+            kubectl -n lab03 rollout status deployment/frontend --timeout=180s
+
+        - name: Kubernetes diagnostics on failure
+          if: failure()
+          run: |
+            kubectl -n lab03 get pvc,pods,deploy,svc -o wide || true
+            kubectl -n lab03 describe pvc postgres-pvc || true
+            kubectl -n lab03 describe deployment postgres || true
+            kubectl -n lab03 describe pod -l app=postgres || true
+            kubectl -n lab03 logs deployment/postgres --all-containers=true --tail=200 || true
+            kubectl -n lab03 get events --sort-by=.lastTimestamp | tail -n 100 || true
+
+        - name: Show services
+          run: |
+            kubectl -n lab03 get svc -o wide
+            kubectl -n ingress-nginx get svc ingress-nginx-controller -o wide
+            kubectl -n lab03 get ingress -o wide
+
+  load-test:
+    name: K6 Load Test
+    runs-on: ubuntu-latest
+    needs: [kubernetes]
+    env:
+      TF_VAR_twc_token: ${{ secrets.TF_VAR_TWC_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_S3_SECRET_KEY }}
+      TF_S3_BUCKET: ${{ secrets.TF_S3_BUCKET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v5
+
+      - name: Build kubeconfig from Terraform output
+        working-directory: terraform
+        run: |
+          terraform init -input=false -backend-config="bucket=${TF_S3_BUCKET}"
+          terraform output -raw kubeconfig > "$RUNNER_TEMP/kubeconfig"
+          chmod 600 "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Check HPA
+        run: kubectl -n lab03 get hpa app-hpa
+
+      - name: Create k6 script ConfigMap
+        run: |
+          kubectl -n lab03 create configmap k6-load-test-script \
+            --from-file=script.js=k6/load-test.js \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Run k6 load test in Kubernetes
+        run: |
+          kubectl -n lab03 delete job k6-load-test --ignore-not-found=true
+          kubectl apply -f kubernetes/k6-load-test-job.yaml
+
+          (
+            MAX_REPLICAS=0
+            START_TS=$(date +%s)
+
+            while true; do
+              CURRENT_REPLICAS=$(kubectl -n lab03 get hpa app-hpa -o jsonpath='{.status.currentReplicas}' 2>/dev/null || echo 0)
+              DESIRED_REPLICAS=$(kubectl -n lab03 get hpa app-hpa -o jsonpath='{.status.desiredReplicas}' 2>/dev/null || echo 0)
+
+              if [ -z "$CURRENT_REPLICAS" ]; then
+                CURRENT_REPLICAS=0
+              fi
+              if [ -z "$DESIRED_REPLICAS" ]; then
+                DESIRED_REPLICAS=0
+              fi
+
+              CANDIDATE_MAX=$CURRENT_REPLICAS
+              if [ "$DESIRED_REPLICAS" -gt "$CANDIDATE_MAX" ]; then
+                CANDIDATE_MAX=$DESIRED_REPLICAS
+              fi
+              if [ "$CANDIDATE_MAX" -gt "$MAX_REPLICAS" ]; then
+                MAX_REPLICAS=$CANDIDATE_MAX
+              fi
+
+              COMPLETE_STATUS=$(kubectl -n lab03 get job k6-load-test -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || true)
+              FAILED_STATUS=$(kubectl -n lab03 get job k6-load-test -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)
+
+              if [ "$COMPLETE_STATUS" = "True" ] || [ "$FAILED_STATUS" = "True" ]; then
+                break
+              fi
+
+              NOW_TS=$(date +%s)
+              if [ $((NOW_TS - START_TS)) -ge 480 ]; then
+                echo "HPA monitor timeout reached" >&2
+                break
+              fi
+
+              sleep 10
+            done
+
+            echo "$MAX_REPLICAS" > "$RUNNER_TEMP/max-hpa-replicas.txt"
+          ) &
+          HPA_MONITOR_PID=$!
+
+          kubectl -n lab03 wait --for=condition=complete --timeout=8m job/k6-load-test || true
+
+          COMPLETE_STATUS=$(kubectl -n lab03 get job k6-load-test -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || true)
+          FAILED_STATUS=$(kubectl -n lab03 get job k6-load-test -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || true)
+
+          if [ "$COMPLETE_STATUS" = "True" ]; then
+            K6_EXIT_CODE=0
+          else
+            K6_EXIT_CODE=1
+          fi
+          
+          POD_NAME=$(kubectl -n lab03 get pods -l job-name=k6-load-test -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+          if [ -n "$POD_NAME" ]; then
+            kubectl -n lab03 logs "$POD_NAME" > "$RUNNER_TEMP/k6-load-test.log" 2>&1 || true
+            kubectl -n lab03 cp "$POD_NAME:/results/k6-summary.json" "$RUNNER_TEMP/k6-summary.json" >/dev/null 2>&1 || true
+          fi
+
+          if [ "$FAILED_STATUS" = "True" ] && [ "$COMPLETE_STATUS" != "True" ]; then
+            echo "k6 Kubernetes job failed" >&2
+          elif [ "$COMPLETE_STATUS" != "True" ]; then
+            echo "k6 Kubernetes job did not reach Complete condition before timeout" >&2
+          fi
+
+          wait "$HPA_MONITOR_PID" || true
+          exit "$K6_EXIT_CODE"
+
+      - name: Collect scaling metrics
+        if: always()
+        run: |
+          kubectl -n lab03 get hpa app-hpa -o wide > "$RUNNER_TEMP/hpa-status.txt"
+          kubectl -n lab03 describe hpa app-hpa > "$RUNNER_TEMP/hpa-describe.txt"
+          kubectl -n lab03 get pods -l app=app -o wide > "$RUNNER_TEMP/backend-pods.txt"
+
+          CURRENT_REPLICAS=$(kubectl -n lab03 get hpa app-hpa -o jsonpath='{.status.currentReplicas}')
+          DESIRED_REPLICAS=$(kubectl -n lab03 get hpa app-hpa -o jsonpath='{.status.desiredReplicas}')
+          MAX_REPLICAS=$(cat "$RUNNER_TEMP/max-hpa-replicas.txt" 2>/dev/null || echo 0)
+
+          {
+            echo "## K6 HPA Validation"
+            echo "- HPA current replicas: ${CURRENT_REPLICAS}"
+            echo "- HPA desired replicas: ${DESIRED_REPLICAS}"
+            echo "- HPA max replicas during test: ${MAX_REPLICAS}"
+            echo "- k6 summary: saved as artifact (k6-summary.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ensure backend scaled above one replica
+        run: |
+          MAX_REPLICAS=$(cat "$RUNNER_TEMP/max-hpa-replicas.txt" 2>/dev/null || echo 0)
+          if [ "$MAX_REPLICAS" -le 1 ]; then
+            echo "HPA did not scale above 1 replica during k6 test"
+            exit 1
+          fi
+
+      - name: Cleanup k6 Kubernetes resources
+        if: always()
+        run: |
+          kubectl -n lab03 delete job k6-load-test --ignore-not-found=true
+          kubectl -n lab03 delete configmap k6-load-test-script --ignore-not-found=true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: k6-load-test-results
+          path: |
+            ${{ runner.temp }}/k6-summary.json
+            ${{ runner.temp }}/hpa-status.txt
+            ${{ runner.temp }}/hpa-describe.txt
+            ${{ runner.temp }}/backend-pods.txt
+            ${{ runner.temp }}/max-hpa-replicas.txt
+            ${{ runner.temp }}/k6-load-test.log
+          if-no-files-found: warn
+
+  telegram-notification:
+    name: Send Telegram Notification
+    runs-on: ubuntu-latest
+    needs: [load-test]
+    if: always()
+    steps:
+      - name: Send Telegram Notification - Final Status
+        run: |
+          if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            SQ="${{ needs.sonar-qube.result == 'success' && 'PASSED' || 'FAILED' }}"
+            BACK="${{ needs.backend-tests.result == 'success' && 'PASSED' || 'FAILED' }}"
+            FRONT="${{ needs.frontend-tests.result == 'success' && 'PASSED' || 'FAILED' }}"
+            BUILD="${{ needs.build-and-push-images.result == 'success' && 'PASSED' || 'FAILED' }}"
+            K8S="${{ needs.kubernetes.result == 'success' && 'PASSED' || 'FAILED' }}"
+            LOAD="${{ needs.load-test.result == 'success' && 'PASSED' || 'FAILED' }}"
+            OVERALL="${{ needs.load-test.result == 'success' && 'ALL CHECKS PASSED' || 'SOME CHECKS FAILED' }}"
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -d "text=CI/CD Pipeline - SonarQube: ${SQ} - Backend: ${BACK} - Frontend: ${FRONT} - Build: ${BUILD} - K8s: ${K8S} - Load: ${LOAD} - Overall: ${OVERALL} - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi

@@ -1,0 +1,113 @@
+name: Argo CD GitOps Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/**'
+      - 'argocd/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+
+jobs:
+  argocd-sync:
+    name: Sync Application with Argo CD
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    env:
+      TF_VAR_twc_token: ${{ secrets.TF_VAR_TWC_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_S3_SECRET_KEY }}
+      TF_S3_BUCKET: ${{ secrets.TF_S3_BUCKET }}
+      ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+      ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Build kubeconfig from Terraform output
+        working-directory: terraform
+        run: |
+          terraform init -input=false -backend-config="bucket=${TF_S3_BUCKET}"
+          terraform output -raw kubeconfig > "$RUNNER_TEMP/kubeconfig"
+          chmod 600 "$RUNNER_TEMP/kubeconfig"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Install Argo CD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64
+
+      - name: Login to Argo CD
+        run: |
+          argocd login "$ARGOCD_SERVER" --username admin --password "$ARGOCD_AUTH_TOKEN" --insecure
+
+      - name: Create or update Argo CD Application
+        run: |
+          REPO_URL="https://github.com/${{ github.repository }}"
+          APP_NAME="devops-project"
+          
+          if argocd app get "$APP_NAME" > /dev/null 2>&1; then
+            echo "Application $APP_NAME exists, updating..."
+            argocd app set "$APP_NAME" \
+              --repo "$REPO_URL" \
+              --path kubernetes \
+              --dest-server https://kubernetes.default.svc \
+              --dest-namespace lab03 \
+              --revision main \
+              --sync-policy automated \
+              --self-heal \
+              --prune
+          else
+            echo "Creating new application $APP_NAME..."
+            argocd app create "$APP_NAME" \
+              --repo "$REPO_URL" \
+              --path kubernetes \
+              --dest-server https://kubernetes.default.svc \
+              --dest-namespace lab03 \
+              --revision main \
+              --sync-policy automated \
+              --self-heal \
+              --prune
+          fi
+
+      - name: Sync Argo CD Application
+        run: |
+          argocd app sync devops-project --force --prune
+
+      - name: Wait for Argo CD sync to complete
+        run: |
+          argocd app wait devops-project --timeout 300
+
+      - name: Get Argo CD application status
+        run: |
+          argocd app get devops-project --output json | tee "$RUNNER_TEMP/argocd-status.json"
+          
+      - name: Upload Argo CD status
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: argocd-status
+          path: ${{ runner.temp }}/argocd-status.json
+          if-no-files-found: warn
+
+      - name: Send Telegram Notification - Argo CD
+        if: always()
+        run: |
+          if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            STATUS="${{ job.status == 'success' && 'SYNCED' || 'OUT OF SYNC' }}"
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -d "text=Argo CD Deployment - App: devops-project - Status: ${STATUS} - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
