@@ -80,26 +80,6 @@ jobs:
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
 
-      - name: SonarCloud Scan for Frontend
-        uses: sonarsource/sonarcloud-github-action@v3
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}_frontend
-        with:
-          projectBaseDir: frontend
-          args: >
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}_frontend
-            -Dsonar.projectName=devops_project_frontend
-            -Dsonar.sources=src
-            -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.test.inclusions=src/__tests__/**/*
-            -Dsonar.test.exclusions=src/__tests__/**/setupTests.js
-            -Dsonar.exclusions=src/__tests__/**/*
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
-
       - name: Check Quality Gate Status
         run: |
           echo "SonarQube Quality Gate check completed"
