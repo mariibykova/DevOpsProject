@@ -379,10 +379,10 @@ jobs:
         POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
         POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET_PROD }}
-        APP_ADMIN_USERNAME: ${{ secrets.APP_ADMIN_USERNAME_PROD }}
-        APP_ADMIN_EMAIL: ${{ secrets.APP_ADMIN_EMAIL_PROD }}
-        APP_ADMIN_PASSWORD: ${{ secrets.APP_ADMIN_PASSWORD_PROD }}
+        SECURITY_JWT_SECRET: ${{ secrets.SECURITY_JWT_SECRET_CI }}
+        APP_ADMIN_USERNAME: ${{ secrets.APP_ADMIN_USERNAME }}
+        APP_ADMIN_EMAIL: ${{ secrets.APP_ADMIN_EMAIL }}
+        APP_ADMIN_PASSWORD: ${{ secrets.APP_ADMIN_PASSWORD_CI }}
       steps:
         - name: Checkout
           uses: actions/checkout@v5
