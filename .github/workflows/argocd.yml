@@ -35,6 +35,9 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+
       - name: Build kubeconfig from Terraform output
         working-directory: terraform
         env:
