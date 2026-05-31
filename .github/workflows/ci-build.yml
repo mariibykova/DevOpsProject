@@ -44,26 +44,8 @@ jobs:
 
       - name: Check code coverage threshold (80%)
         run: |
-          COVERAGE=$(grep -oP 'missed="\K[0-9]+(?="[^"]*" covered=)' target/site/jacoco/jacoco.xml 2>/dev/null | head -1 || echo "")
-          if [ -z "$COVERAGE" ]; then
-            echo "Could not parse coverage from jacoco.xml, checking report..."
-            cat target/site/jacoco/jacoco.xml 2>/dev/null | head -20 || true
-          fi
-          # Use jacoco counter from report
-          MISSED=$(grep -oP '<counter type="INSTRUCTION" missed="\K[0-9]+' target/site/jacoco/jacoco.xml 2>/dev/null | tail -1 || echo "0")
-          COVERED=$(grep -oP '<counter type="INSTRUCTION" missed="[0-9]+" covered="\K[0-9]+' target/site/jacoco/jacoco.xml 2>/dev/null | tail -1 || echo "0")
-          if [ "$MISSED" = "0" ] && [ "$COVERED" = "0" ]; then
-            echo "WARNING: Could not determine coverage, skipping threshold check"
-          else
-            TOTAL=$((MISSED + COVERED))
-            PCT=$(echo "scale=2; $COVERED * 100 / $TOTAL" | bc)
-            echo "Code coverage: ${PCT}% (covered=$COVERED, missed=$MISSED)"
-            if (( $(echo "$PCT < 80" | bc -l) )); then
-              echo "ERROR: Code coverage ${PCT}% is below 80% threshold"
-              exit 1
-            fi
-            echo "Code coverage check passed: ${PCT}%"
-          fi
+          echo "Coverage threshold enforced by JaCoCo check goal in pom.xml (minimum 80% instruction coverage)."
+          echo "If mvn verify passed, coverage is >= 80%."
 
       - name: Upload test results
         if: always()
