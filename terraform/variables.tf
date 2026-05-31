@@ -4,6 +4,18 @@ variable "twc_token" {
   sensitive   = true
 }
 
+variable "s3_access_key" {
+  description = "S3 access key for Terraform backend."
+  type        = string
+  sensitive   = true
+}
+
+variable "s3_secret_key" {
+  description = "S3 secret key for Terraform backend."
+  type        = string
+  sensitive   = true
+}
+
 variable "cluster_name" {
   description = "Имя Kubernetes кластера Timeweb Cloud."
   type        = string
