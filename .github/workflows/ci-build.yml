@@ -409,13 +409,18 @@ jobs:
         - name: Install ingress-nginx controller
           run: |
             kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.3/deploy/static/provider/cloud/deploy.yaml
-            kubectl -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=240s
+            kubectl -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=300s
 
         - name: Configure ingress-nginx
           run: |
-            kubectl -n ingress-nginx patch deployment ingress-nginx-controller --type='merge' -p '{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}'
-            kubectl -n ingress-nginx patch service ingress-nginx-controller --type='merge' -p '{"spec":{"type":"ClusterIP"}}'
-            kubectl -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=240s
+            CURRENT_HOST_NETWORK=$(kubectl -n ingress-nginx get deployment ingress-nginx-controller -o jsonpath='{.spec.template.spec.hostNetwork}' 2>/dev/null || echo "false")
+            if [ "$CURRENT_HOST_NETWORK" != "true" ]; then
+              kubectl -n ingress-nginx patch deployment ingress-nginx-controller --type='merge' -p '{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}'
+              kubectl -n ingress-nginx patch service ingress-nginx-controller --type='merge' -p '{"spec":{"type":"ClusterIP"}}'
+              kubectl -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=300s
+            else
+              echo "ingress-nginx already configured with hostNetwork, skipping patch"
+            fi
 
         - name: Create or update image pull secret
           run: |
