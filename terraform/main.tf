@@ -11,7 +11,7 @@ terraform {
     endpoints = {
       s3 = "https://s3.timeweb.cloud"
     }
-    bucket = "lab03"
+    bucket = "caa737bf-eb23-46bf-bf1a-63fdc69ebec7"
     key    = "terraform_k8s.tfstate"
     region = "ru-1"
 
