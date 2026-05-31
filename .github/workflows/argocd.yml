@@ -38,10 +38,13 @@ jobs:
       - name: Build kubeconfig from Terraform output
         working-directory: terraform
         env:
-          TF_VAR_s3_access_key: ${{ secrets.TF_S3_ACCESS_KEY }}
-          TF_VAR_s3_secret_key: ${{ secrets.TF_S3_SECRET_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.TF_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_S3_SECRET_KEY }}
         run: |
-          terraform init -input=false -backend-config="bucket=${TF_S3_BUCKET}"
+          terraform init -input=false \
+            -backend-config="bucket=${TF_S3_BUCKET}" \
+            -backend-config="access_key=${TF_S3_ACCESS_KEY}" \
+            -backend-config="secret_key=${TF_S3_SECRET_KEY}"
           terraform output -raw kubeconfig > "$RUNNER_TEMP/kubeconfig"
           chmod 600 "$RUNNER_TEMP/kubeconfig"
           echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
