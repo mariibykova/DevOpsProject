@@ -520,37 +520,23 @@ jobs:
       - name: Send Telegram Notification - Pipeline Status
         run: |
           if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
-            BACK_TEST="${{ needs.backend_test.result == 'success' && '✅' || '❌' }}"
-            BACK_BUILD="${{ needs.backend_build.result == 'success' && '✅' || '❌' }}"
-            FRONT_TEST="${{ needs.frontend_test.result == 'success' && '✅' || '❌' }}"
-            FRONT_BUILD="${{ needs.frontend_build.result == 'success' && '✅' || '❌' }}"
-            SONAR="${{ needs.sonarqube_scan.result == 'success' && '✅' || '❌' }}"
-            PUSH="${{ needs.push_images.result == 'success' && '✅' || '❌' }}"
-            DEPLOY="${{ needs.update_gitops_manifests.result == 'success' && '✅' || '❌' }}"
+            BACK_TEST="${{ needs.backend_test.result == 'success' && 'PASSED' || 'FAILED' }}"
+            BACK_BUILD="${{ needs.backend_build.result == 'success' && 'PASSED' || 'FAILED' }}"
+            FRONT_TEST="${{ needs.frontend_test.result == 'success' && 'PASSED' || 'FAILED' }}"
+            FRONT_BUILD="${{ needs.frontend_build.result == 'success' && 'PASSED' || 'FAILED' }}"
+            SONAR="${{ needs.sonarqube_scan.result == 'success' && 'PASSED' || 'FAILED' }}"
+            PUSH="${{ needs.push_images.result == 'success' && 'PASSED' || 'FAILED' }}"
+            DEPLOY="${{ needs.update_gitops_manifests.result == 'success' && 'PASSED' || 'FAILED' }}"
 
             if [ "${{ needs.update_gitops_manifests.result }}" = "success" ]; then
-              OVERALL="✅ ALL CHECKS PASSED"
+              OVERALL="ALL CHECKS PASSED"
             else
-              OVERALL="❌ SOME CHECKS FAILED"
+              OVERALL="SOME CHECKS FAILED"
             fi
 
-            MESSAGE="🚀 CI/CD Pipeline Report
-Repo: ${{ github.repository }}
-Branch: ${{ github.ref_name }}
-Run: ${{ github.run_number }}
-
-${BACK_TEST} backend_test
-${BACK_BUILD} backend_build
-${FRONT_TEST} frontend_test
-${FRONT_BUILD} frontend_build
-${SONAR} sonarqube_scan
-${PUSH} push_images
-${DEPLOY} update_gitops_manifests
-
-Overall: ${OVERALL}
-🔗 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            TEXT="CI/CD Pipeline - ${{ github.repository }} branch=${{ github.ref_name }} run=${{ github.run_number }} | backend_test=${BACK_TEST} | backend_build=${BACK_BUILD} | frontend_test=${FRONT_TEST} | frontend_build=${FRONT_BUILD} | sonarqube_scan=${SONAR} | push_images=${PUSH} | update_gitops_manifests=${DEPLOY} | Overall: ${OVERALL} | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
             curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-              --data-urlencode "text=${MESSAGE}"
+              -d "text=${TEXT}"
           fi
