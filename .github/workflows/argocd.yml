@@ -64,6 +64,13 @@ jobs:
         run: |
           argocd login "$ARGOCD_SERVER" --username admin --password "$ARGOCD_AUTH_TOKEN" --insecure
 
+      - name: Add GitHub repository to Argo CD
+        run: |
+          argocd repo add "https://github.com/${{ github.repository }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
+            --insecure --upsert
+
       - name: Create or update Argo CD Application
         run: |
           REPO_URL="https://github.com/${{ github.repository }}"
