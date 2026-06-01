@@ -467,16 +467,19 @@ jobs:
         if: ${{ steps.storage.outputs.use_static_pv == 'true' }}
         run: kubectl apply -f kubernetes/postgres-pv.yaml
 
-      - name: Recreate pending PVC without storage class
+      - name: Recreate PVC if storageClassName changed
         run: |
-          CURRENT_PHASE=$(kubectl -n lab03 get pvc postgres-pvc -o jsonpath='{.status.phase}' 2>/dev/null || true)
           CURRENT_SC=$(kubectl -n lab03 get pvc postgres-pvc -o jsonpath='{.spec.storageClassName}' 2>/dev/null || true)
           if [ "$CURRENT_SC" = "<no value>" ]; then
             CURRENT_SC=""
           fi
-          if [ "$CURRENT_PHASE" = "Pending" ] && [ "$CURRENT_SC" != "$POSTGRES_STORAGE_CLASS" ]; then
-            echo "Deleting pending pvc/postgres-pvc (phase=$CURRENT_PHASE, storageClassName=$CURRENT_SC)"
+          # If PVC exists with a non-empty storageClassName (e.g. "manual"), delete it so it can be recreated without one
+          if [ -n "$CURRENT_SC" ]; then
+            echo "Deleting pvc/postgres-pvc with storageClassName=$CURRENT_SC to recreate without storageClassName"
             kubectl -n lab03 delete pvc postgres-pvc --ignore-not-found=true
+            # Wait for postgres pod to terminate before PVC can be deleted
+            kubectl -n lab03 delete pod -l app=postgres --ignore-not-found=true
+            sleep 5
           fi
 
       - name: Apply postgres manifests

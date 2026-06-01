@@ -68,6 +68,7 @@ metadata:
   name: postgres-pvc
   namespace: lab03
 spec:
+  storageClassName: manual
   accessModes:
     - ReadWriteOnce
   resources:
