@@ -13,7 +13,7 @@ spec:
     path: kubernetes
     kustomize:
       images:
-        - ghcr.io/YOUR_GITHUB_USERNAME/devopsproject:sha-${ARGOCD_APP_REVISION}
+        - ghcr.io/mariibykova/devopsproject:sha-${ARGOCD_APP_REVISION}
   destination:
     server: https://kubernetes.default.svc
     namespace: lab03
