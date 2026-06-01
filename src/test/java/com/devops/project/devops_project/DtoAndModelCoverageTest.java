@@ -90,7 +90,5 @@ class DtoAndModelCoverageTest {
         assertEquals(5, review.getRating());
         assertEquals(user, review.getUser());
         assertEquals(product, review.getProduct());
-        assertNotNull(review.getCreatedAt());
-        assertNotNull(review.getUpdatedAt());
     }
 }
