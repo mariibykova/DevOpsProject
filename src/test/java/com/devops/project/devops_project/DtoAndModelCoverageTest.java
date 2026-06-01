@@ -70,7 +70,7 @@ class DtoAndModelCoverageTest {
     }
 
     @Test
-    void shouldCoverReviewModelSettersAndGetters() {
+    void shouldCoverReviewModelSettersAndGetters() throws Exception {
         Review review = new Review();
         User user = new User();
         user.setId(1L);
@@ -84,11 +84,21 @@ class DtoAndModelCoverageTest {
         review.setUser(user);
         review.setProduct(product);
 
+        // Set timestamps via reflection for coverage (normally set by JPA @CreationTimestamp/@UpdateTimestamp)
+        java.lang.reflect.Field createdAtField = Review.class.getDeclaredField("createdAt");
+        createdAtField.setAccessible(true);
+        createdAtField.set(review, java.time.LocalDateTime.now());
+        java.lang.reflect.Field updatedAtField = Review.class.getDeclaredField("updatedAt");
+        updatedAtField.setAccessible(true);
+        updatedAtField.set(review, java.time.LocalDateTime.now());
+
         assertEquals(10L, review.getId());
         assertEquals("Great Product", review.getTitle());
         assertEquals("This is an excellent product.", review.getBody());
         assertEquals(5, review.getRating());
         assertEquals(user, review.getUser());
         assertEquals(product, review.getProduct());
+        assertNotNull(review.getCreatedAt());
+        assertNotNull(review.getUpdatedAt());
     }
 }
