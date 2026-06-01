@@ -68,4 +68,29 @@ class DtoAndModelCoverageTest {
         assertEquals(Role.ROLE_ADMIN, Role.valueOf("ROLE_ADMIN"));
         assertFalse(product.getReviews().iterator().hasNext());
     }
+
+    @Test
+    void shouldCoverReviewModelSettersAndGetters() {
+        Review review = new Review();
+        User user = new User();
+        user.setId(1L);
+        Product product = new Product();
+        product.setId(2L);
+
+        review.setId(10L);
+        review.setTitle("Great Product");
+        review.setBody("This is an excellent product.");
+        review.setRating(5);
+        review.setUser(user);
+        review.setProduct(product);
+
+        assertEquals(10L, review.getId());
+        assertEquals("Great Product", review.getTitle());
+        assertEquals("This is an excellent product.", review.getBody());
+        assertEquals(5, review.getRating());
+        assertEquals(user, review.getUser());
+        assertEquals(product, review.getProduct());
+        assertNotNull(review.getCreatedAt());
+        assertNotNull(review.getUpdatedAt());
+    }
 }
