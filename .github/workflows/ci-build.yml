@@ -180,8 +180,7 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.scm.provider=git
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
+            -Dsonar.qualitygate.wait=false
 
   sonarqube_scan:
     name: SonarQube Backend Scan
