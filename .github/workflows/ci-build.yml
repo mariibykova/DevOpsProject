@@ -170,12 +170,12 @@ jobs:
       - name: SonarCloud Scan (Frontend)
         uses: sonarsource/sonarcloud-github-action@v3
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FRONTEND }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: frontend
           args: >
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_FRONTEND }}
+            -Dsonar.projectKey=mariibykova_devops_project_frontend
             -Dsonar.projectName=devops_project_frontend
             -Dsonar.sources=src
             -Dsonar.sourceEncoding=UTF-8
