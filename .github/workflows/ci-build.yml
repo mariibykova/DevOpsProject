@@ -175,7 +175,7 @@ jobs:
           projectBaseDir: frontend
           args: >
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=mariibykova_devops_project_frontend
+            -Dsonar.projectKey=mariibykova_DevOpsProject_frontend
             -Dsonar.projectName=devops_project_frontend
             -Dsonar.sources=src
             -Dsonar.sourceEncoding=UTF-8
