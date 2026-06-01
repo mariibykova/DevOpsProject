@@ -50,7 +50,7 @@ public class TelegramNotificationService {
             if (response.getStatusCode().is2xxSuccessful()) {
                 logger.info("Telegram notification sent successfully");
             } else {
-                logger.error("Failed to send Telegram notification: {}", response.getBody());
+                logger.error("Failed to send Telegram notification: status={}, body={}", response.getStatusCode(), response.getBody());
             }
         } catch (Exception e) {
             logger.error("Error sending Telegram notification", e);
