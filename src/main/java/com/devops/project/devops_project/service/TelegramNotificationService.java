@@ -53,7 +53,7 @@ public class TelegramNotificationService {
                 logger.error("Failed to send Telegram notification: {}", response.getBody());
             }
         } catch (Exception e) {
-            logger.error("Error sending Telegram notification: {}", e.getMessage());
+            logger.error("Error sending Telegram notification", e);
         }
     }
 
