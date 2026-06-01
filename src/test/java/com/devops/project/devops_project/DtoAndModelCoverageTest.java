@@ -100,5 +100,50 @@ class DtoAndModelCoverageTest {
         assertEquals(product, review.getProduct());
         assertNotNull(review.getCreatedAt());
         assertNotNull(review.getUpdatedAt());
+
+        // Cover Lombok-generated equals() and hashCode() from @EqualsAndHashCode
+        Review review2 = new Review();
+        review2.setId(10L);
+        Review review3 = new Review();
+        review3.setId(99L);
+
+        assertEquals(review, review2);
+        assertFalse(review.equals(review3));
+        assertEquals(review.hashCode(), review2.hashCode());
+        assertFalse(review.hashCode() == review3.hashCode());
+        assertFalse(review.equals(null));
+        assertFalse(review.equals("not a review"));
+    }
+
+    @Test
+    void shouldCoverProductEqualsAndHashCode() {
+        Product p1 = new Product();
+        p1.setId(1L);
+        Product p2 = new Product();
+        p2.setId(1L);
+        Product p3 = new Product();
+        p3.setId(2L);
+
+        assertEquals(p1, p2);
+        assertFalse(p1.equals(p3));
+        assertEquals(p1.hashCode(), p2.hashCode());
+        assertFalse(p1.equals(null));
+        assertFalse(p1.equals("not a product"));
+    }
+
+    @Test
+    void shouldCoverUserEqualsAndHashCode() {
+        User u1 = new User();
+        u1.setId(1L);
+        User u2 = new User();
+        u2.setId(1L);
+        User u3 = new User();
+        u3.setId(2L);
+
+        assertEquals(u1, u2);
+        assertFalse(u1.equals(u3));
+        assertEquals(u1.hashCode(), u2.hashCode());
+        assertFalse(u1.equals(null));
+        assertFalse(u1.equals("not a user"));
     }
 }
