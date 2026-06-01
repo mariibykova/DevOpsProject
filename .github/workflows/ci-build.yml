@@ -167,6 +167,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Run tests for coverage
+        run: npm run coverage
+
       - name: SonarCloud Scan (Frontend)
         uses: sonarsource/sonarcloud-github-action@v3
         env:
@@ -178,9 +181,11 @@ jobs:
             -Dsonar.projectKey=mariibykova_DevOpsProject_frontend
             -Dsonar.projectName=devops_project_frontend
             -Dsonar.sources=src
+            -Dsonar.tests=src/__tests__
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.scm.provider=git
             -Dsonar.qualitygate.wait=false
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
   sonarqube_scan:
     name: SonarQube Backend Scan
@@ -215,7 +220,7 @@ jobs:
           cache: maven
 
       - name: Run tests and generate coverage report for SonarQube
-        run: mvn -B test -DskipTests=false
+        run: mvn -B verify -DskipTests=false
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarcloud-github-action@v3

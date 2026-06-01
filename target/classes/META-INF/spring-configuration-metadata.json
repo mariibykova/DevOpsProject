@@ -1,0 +1,46 @@
+{
+  "groups": [
+    {
+      "name": "app.admin",
+      "type": "com.devops.project.devops_project.config.AppAdminProperties",
+      "sourceType": "com.devops.project.devops_project.config.AppAdminProperties"
+    },
+    {
+      "name": "security.jwt",
+      "type": "com.devops.project.devops_project.config.JwtProperties",
+      "sourceType": "com.devops.project.devops_project.config.JwtProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.admin.email",
+      "type": "java.lang.String",
+      "sourceType": "com.devops.project.devops_project.config.AppAdminProperties"
+    },
+    {
+      "name": "app.admin.password",
+      "type": "java.lang.String",
+      "sourceType": "com.devops.project.devops_project.config.AppAdminProperties"
+    },
+    {
+      "name": "app.admin.username",
+      "type": "java.lang.String",
+      "sourceType": "com.devops.project.devops_project.config.AppAdminProperties"
+    },
+    {
+      "name": "security.jwt.expiration-ms",
+      "type": "java.lang.Long",
+      "sourceType": "com.devops.project.devops_project.config.JwtProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "security.jwt.secret",
+      "type": "java.lang.String",
+      "sourceType": "com.devops.project.devops_project.config.JwtProperties"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}
