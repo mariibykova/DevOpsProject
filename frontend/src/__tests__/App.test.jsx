@@ -1,46 +1,63 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App';
+import * as apiClient from '../api/apiClient';
 
-vi.mock('../api/apiClient', () => ({
-  login: vi.fn(),
-  register: vi.fn(),
-  getProducts: vi.fn().mockResolvedValue([]),
-  getReviews: vi.fn().mockResolvedValue([]),
-}));
+vi.mock('../api/apiClient');
+
+const mockUser = { id: 1, userName: 'testuser', email: 'test@test.com', roles: ['ROLE_USER'] };
+const mockProducts = [{ id: 1, name: 'Product 1', description: 'Desc 1', price: 10.0 }];
+const mockReviews = [{ id: 1, title: 'Review 1', body: 'Body 1', rating: 5, productId: 1, userId: 1 }];
 
 beforeEach(() => {
+  vi.clearAllMocks();
   localStorage.clear();
+  apiClient.getProducts.mockResolvedValue(mockProducts);
+  apiClient.getReviews.mockResolvedValue(mockReviews);
 });
 
 describe('App', () => {
-  it('renders header with title', () => {
+  it('renders products page by default', () => {
     render(<App />);
-    expect(screen.getByText('Product Catalog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /products/i })).toBeTruthy();
   });
 
-  it('renders Products and Reviews navigation buttons', () => {
+  it('shows login form when clicking login button', () => {
     render(<App />);
-    expect(screen.getByRole('button', { name: 'Products' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reviews' })).toBeInTheDocument();
+    const loginButton = screen.getAllByRole('button', { name: /login/i })[0];
+    fireEvent.click(loginButton);
+    expect(screen.getByRole('heading', { name: /login/i })).toBeTruthy();
   });
 
-  it('shows Login button when not authenticated', () => {
+  it('shows register page when switching from login', () => {
     render(<App />);
-    expect(screen.getByText('Login')).toBeInTheDocument();
+    const loginButton = screen.getAllByRole('button', { name: /login/i })[0];
+    fireEvent.click(loginButton);
+    const registerButton = screen.getByRole('button', { name: /register/i });
+    fireEvent.click(registerButton);
+    expect(screen.getByRole('heading', { name: /register/i })).toBeTruthy();
   });
 
-  it('switches to reviews page when Reviews button is clicked', async () => {
+  it('navigates to reviews page', () => {
     render(<App />);
-    fireEvent.click(screen.getByText('Reviews'));
+    const reviewsButton = screen.getByRole('button', { name: /reviews/i });
+    fireEvent.click(reviewsButton);
+    expect(screen.getByRole('heading', { name: /reviews/i })).toBeTruthy();
+  });
+
+  it('logs out user', async () => {
+    localStorage.setItem('token', 'abc123');
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    
+    render(<App />);
+    
     await waitFor(() => {
-      expect(screen.getByText('Reviews', { selector: 'h2' })).toBeInTheDocument();
+      expect(screen.getByText('testuser')).toBeTruthy();
     });
-  });
-
-  it('shows login form when Login button is clicked', () => {
-    render(<App />);
-    fireEvent.click(screen.getByText('Login'));
-    expect(screen.getByText('Login', { selector: 'h2' })).toBeInTheDocument();
+    
+    const logoutButton = screen.getByRole('button', { name: /logout/i });
+    fireEvent.click(logoutButton);
+    
+    expect(localStorage.getItem('token')).toBeNull();
   });
 });
