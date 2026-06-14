@@ -156,6 +156,55 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fix SonarCloud main branch (one-time)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        working-directory: .
+        run: |
+          PROJECT_KEY="${{ secrets.SONAR_PROJECT_KEY_FRONTEND }}"
+          # List current branches
+          BRANCHES=$(curl -s -u "${SONAR_TOKEN}:" \
+            "https://sonarcloud.io/api/project_branches/list?project=${PROJECT_KEY}")
+          echo "Current branches: $BRANCHES"
+          # Check if main branch is still named 'master'
+          MAIN_NAME=$(echo "$BRANCHES" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          for b in data.get('branches', []):
+              if b.get('isMain'):
+                  print(b['name'])
+                  break
+          " 2>/dev/null || echo "unknown")
+          echo "Current main branch name: $MAIN_NAME"
+          if [ "$MAIN_NAME" = "master" ]; then
+            # Delete the non-main 'main' branch if it exists
+            HAS_MAIN_BRANCH=$(echo "$BRANCHES" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          for b in data.get('branches', []):
+              if b['name'] == 'main' and not b.get('isMain'):
+                  print('yes')
+                  break
+          else:
+              print('no')
+          " 2>/dev/null || echo "no")
+            if [ "$HAS_MAIN_BRANCH" = "yes" ]; then
+              echo "Deleting non-main 'main' branch entry from SonarCloud..."
+              curl -s -X POST -u "${SONAR_TOKEN}:" \
+                "https://sonarcloud.io/api/project_branches/delete" \
+                -d "project=${PROJECT_KEY}&branch=main"
+              echo "Deleted 'main' branch entry."
+            fi
+            # Rename 'master' (Main Branch) to 'main'
+            echo "Renaming main branch from 'master' to 'main'..."
+            curl -s -X POST -u "${SONAR_TOKEN}:" \
+              "https://sonarcloud.io/api/project_branches/rename" \
+              -d "project=${PROJECT_KEY}&name=main"
+            echo "Renamed main branch to 'main'."
+          else
+            echo "Main branch is already named '$MAIN_NAME', no fix needed."
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
@@ -185,7 +234,8 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.scm.provider=git
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.qualitygate.wait=false
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 
   sonarqube_scan:
     name: SonarQube Backend Scan
