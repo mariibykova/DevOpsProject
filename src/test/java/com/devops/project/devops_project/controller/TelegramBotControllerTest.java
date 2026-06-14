@@ -19,6 +19,10 @@ import static org.mockito.Mockito.any;
 @ExtendWith(MockitoExtension.class)
 class TelegramBotControllerTest {
 
+    private static final String STATUS_KEY = "status";
+    private static final String UNKNOWN = "Unknown";
+    private static final String NA = "N/A";
+
     @Mock
     private TelegramNotificationService telegramService;
 
@@ -30,7 +34,7 @@ class TelegramBotControllerTest {
         Map<String, String> request = Map.of("message", "Hello from test");
         ResponseEntity<Map<String, String>> response = controller.sendNotification(request);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).containsEntry("status", "Notification sent");
+        assertThat(response.getBody()).containsEntry(STATUS_KEY, "Notification sent");
         verify(telegramService).sendNotification("Hello from test");
     }
 
@@ -57,13 +61,13 @@ class TelegramBotControllerTest {
     void sendPipelineStatus_withAllFields_returns200() {
         Map<String, String> request = Map.of(
                 "pipelineName", "CI Build",
-                "status", "success",
+                STATUS_KEY, "success",
                 "runId", "42",
                 "details", "All jobs passed"
         );
         ResponseEntity<Map<String, String>> response = controller.sendPipelineStatus(request);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).containsEntry("status", "Pipeline status notification sent");
+        assertThat(response.getBody()).containsEntry(STATUS_KEY, "Pipeline status notification sent");
         verify(telegramService).sendPipelineStatus("CI Build", "success", "42", "All jobs passed");
     }
 
@@ -72,19 +76,19 @@ class TelegramBotControllerTest {
         Map<String, String> request = new HashMap<>();
         ResponseEntity<Map<String, String>> response = controller.sendPipelineStatus(request);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(telegramService).sendPipelineStatus("Unknown", "Unknown", "N/A", "N/A");
+        verify(telegramService).sendPipelineStatus(UNKNOWN, UNKNOWN, NA, NA);
     }
 
     @Test
     void sendDeploymentStatus_withAllFields_returns200() {
         Map<String, String> request = Map.of(
                 "environment", "production",
-                "status", "deployed",
+                STATUS_KEY, "deployed",
                 "version", "v1.2.3"
         );
         ResponseEntity<Map<String, String>> response = controller.sendDeploymentStatus(request);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).containsEntry("status", "Deployment status notification sent");
+        assertThat(response.getBody()).containsEntry(STATUS_KEY, "Deployment status notification sent");
         verify(telegramService).sendDeploymentStatus("production", "deployed", "v1.2.3");
     }
 
@@ -93,7 +97,7 @@ class TelegramBotControllerTest {
         Map<String, String> request = new HashMap<>();
         ResponseEntity<Map<String, String>> response = controller.sendDeploymentStatus(request);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(telegramService).sendDeploymentStatus("Unknown", "Unknown", "N/A");
+        verify(telegramService).sendDeploymentStatus(UNKNOWN, UNKNOWN, NA);
     }
 
     @Test
@@ -105,7 +109,7 @@ class TelegramBotControllerTest {
         );
         ResponseEntity<Map<String, String>> response = controller.sendSonarQubeResults(request);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).containsEntry("status", "SonarQube results notification sent");
+        assertThat(response.getBody()).containsEntry(STATUS_KEY, "SonarQube results notification sent");
         verify(telegramService).sendSonarQubeResults("PASSED", "85%", "0");
     }
 
@@ -114,6 +118,6 @@ class TelegramBotControllerTest {
         Map<String, String> request = new HashMap<>();
         ResponseEntity<Map<String, String>> response = controller.sendSonarQubeResults(request);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        verify(telegramService).sendSonarQubeResults("Unknown", "N/A", "N/A");
+        verify(telegramService).sendSonarQubeResults(UNKNOWN, NA, NA);
     }
 }

@@ -75,6 +75,7 @@ jobs:
             -Dsonar.java.binaries=target/classes
             -Dsonar.java.test.binaries=target/test-classes
             -Dsonar.java.libraries=target/dependency/*.jar
+            -Dsonar.java.test.libraries=target/dependency/*.jar
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
             -Dsonar.test.inclusions=src/test/java/**/*Test.java
