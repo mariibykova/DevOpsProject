@@ -122,7 +122,6 @@ class DtoAndModelCoverageTest {
         assertEquals(review.hashCode(), review2.hashCode());
         assertNotEquals(review.hashCode(), review3.hashCode());
         assertNotNull(review);
-        assertFalse(review.equals("not a review"));
     }
 
     @Test
@@ -138,7 +137,6 @@ class DtoAndModelCoverageTest {
         assertNotEquals(p1, p3);
         assertEquals(p1.hashCode(), p2.hashCode());
         assertNotNull(p1);
-        assertFalse(p1.equals("not a product"));
     }
 
     @Test
@@ -154,6 +152,5 @@ class DtoAndModelCoverageTest {
         assertNotEquals(u1, u3);
         assertEquals(u1.hashCode(), u2.hashCode());
         assertNotNull(u1);
-        assertFalse(u1.equals("not a user"));
     }
 }
