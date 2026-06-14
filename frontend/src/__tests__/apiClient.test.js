@@ -213,3 +213,21 @@ describe('Reviews API', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('sanitizeId validation', () => {
+  it('rejects non-numeric id for updateProduct', async () => {
+    await expect(updateProduct('abc', {})).rejects.toThrow('Invalid id');
+  });
+
+  it('rejects negative id for deleteProduct', async () => {
+    await expect(deleteProduct(-1)).rejects.toThrow('Invalid id');
+  });
+
+  it('rejects zero id for updateReview', async () => {
+    await expect(updateReview(0, {})).rejects.toThrow('Invalid id');
+  });
+
+  it('rejects fractional id for deleteReview', async () => {
+    await expect(deleteReview(1.5)).rejects.toThrow('Invalid id');
+  });
+});

@@ -60,4 +60,64 @@ describe('App', () => {
     
     expect(localStorage.getItem('token')).toBeNull();
   });
+
+  it('handles login and stores sanitized data', async () => {
+    const loginResponse = { token: 'jwt.token.here', user: mockUser };
+    apiClient.login.mockResolvedValue(loginResponse);
+
+    render(<App />);
+    const loginButton = screen.getAllByRole('button', { name: /login/i })[0];
+    fireEvent.click(loginButton);
+
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/password/i);
+    fireEvent.change(emailInput, { target: { value: 'test@test.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+
+    const submitButton = screen.getAllByRole('button', { name: /login/i }).find(
+      (btn) => btn.getAttribute('type') === 'submit'
+    );
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(localStorage.getItem('token')).toBe('jwt.token.here');
+      expect(screen.getByText('testuser')).toBeTruthy();
+    });
+  });
+
+  it('handles register and stores sanitized data', async () => {
+    const registerResponse = { token: 'reg.token.here', user: { ...mockUser, userName: 'newuser' } };
+    apiClient.register.mockResolvedValue(registerResponse);
+
+    render(<App />);
+    const loginButton = screen.getAllByRole('button', { name: /login/i })[0];
+    fireEvent.click(loginButton);
+    const registerSwitch = screen.getByRole('button', { name: /register/i });
+    fireEvent.click(registerSwitch);
+
+    const usernameInput = screen.getByLabelText(/username/i);
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/password/i);
+    fireEvent.change(usernameInput, { target: { value: 'newuser' } });
+    fireEvent.change(emailInput, { target: { value: 'new@test.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+
+    const submitButton = screen.getByRole('button', { name: /^register$/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(localStorage.getItem('token')).toBe('reg.token.here');
+      expect(screen.getByText('newuser')).toBeTruthy();
+    });
+  });
+
+  it('clears storage on invalid saved user JSON', () => {
+    localStorage.setItem('token', 'abc123');
+    localStorage.setItem('user', 'invalid-json');
+
+    render(<App />);
+
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
 });

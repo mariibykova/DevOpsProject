@@ -89,4 +89,112 @@ describe('ProductList', () => {
       expect(screen.getByText('$49.99')).toBeInTheDocument();
     });
   });
+
+  it('deletes a product when confirmed', async () => {
+    api.getProducts.mockResolvedValue(mockProducts);
+    api.deleteProduct.mockResolvedValue(null);
+    vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+
+    render(<ProductList user={{ id: 1, userName: 'admin', roles: ['ROLE_ADMIN'] }} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Laptop')).toBeInTheDocument();
+    });
+
+    const deleteButtons = screen.getAllByText('Delete');
+    api.getProducts.mockResolvedValue([mockProducts[1]]);
+    fireEvent.click(deleteButtons[0]);
+
+    await waitFor(() => {
+      expect(api.deleteProduct).toHaveBeenCalledWith(1);
+    });
+
+    globalThis.confirm.mockRestore();
+  });
+
+  it('does not delete when confirm is cancelled', async () => {
+    api.getProducts.mockResolvedValue(mockProducts);
+    vi.spyOn(globalThis, 'confirm').mockReturnValue(false);
+
+    render(<ProductList user={{ id: 1, userName: 'admin', roles: ['ROLE_ADMIN'] }} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Laptop')).toBeInTheDocument();
+    });
+
+    const deleteButtons = screen.getAllByText('Delete');
+    fireEvent.click(deleteButtons[0]);
+
+    expect(api.deleteProduct).not.toHaveBeenCalled();
+    globalThis.confirm.mockRestore();
+  });
+
+  it('opens edit form when clicking Edit', async () => {
+    api.getProducts.mockResolvedValue(mockProducts);
+
+    render(<ProductList user={{ id: 1, userName: 'admin', roles: ['ROLE_ADMIN'] }} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Laptop')).toBeInTheDocument();
+    });
+
+    const editButtons = screen.getAllByText('Edit');
+    fireEvent.click(editButtons[0]);
+
+    expect(screen.getByText('Edit Product')).toBeInTheDocument();
+  });
+
+  it('opens new product form when clicking Add Product', async () => {
+    api.getProducts.mockResolvedValue(mockProducts);
+
+    render(<ProductList user={{ id: 1, userName: 'admin', roles: ['ROLE_ADMIN'] }} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Add Product')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add Product'));
+
+    expect(screen.getByText('New Product')).toBeInTheDocument();
+  });
+
+  it('closes form and reloads products', async () => {
+    api.getProducts.mockResolvedValue(mockProducts);
+
+    render(<ProductList user={{ id: 1, userName: 'admin', roles: ['ROLE_ADMIN'] }} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Add Product')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add Product'));
+    expect(screen.getByText('New Product')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Cancel'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Laptop')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error on delete failure', async () => {
+    api.getProducts.mockResolvedValue(mockProducts);
+    api.deleteProduct.mockRejectedValue(new Error('Delete failed'));
+    vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+
+    render(<ProductList user={{ id: 1, userName: 'admin', roles: ['ROLE_ADMIN'] }} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Laptop')).toBeInTheDocument();
+    });
+
+    const deleteButtons = screen.getAllByText('Delete');
+    fireEvent.click(deleteButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete failed')).toBeInTheDocument();
+    });
+
+    globalThis.confirm.mockRestore();
+  });
 });
