@@ -178,7 +178,7 @@ jobs:
           projectBaseDir: frontend
           args: >
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=mariibykova_DevOpsProject_frontend
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_FRONTEND }}
             -Dsonar.projectName=devops_project_frontend
             -Dsonar.sources=src
             -Dsonar.exclusions=src/__tests__/**,src/setupTests.js
