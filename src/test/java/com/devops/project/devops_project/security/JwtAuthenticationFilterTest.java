@@ -1,6 +1,7 @@
 package com.devops.project.devops_project.security;
 
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +16,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -44,7 +46,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldSkipWhenNoAuthorizationHeader() throws Exception {
+    void shouldSkipWhenNoAuthorizationHeader() throws ServletException, IOException {
         filter.doFilterInternal(new MockHttpServletRequest(), new MockHttpServletResponse(), filterChain);
 
         verify(filterChain).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
@@ -52,7 +54,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldSkipWhenHeaderNotBearer() throws Exception {
+    void shouldSkipWhenHeaderNotBearer() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Basic abc");
 
@@ -63,7 +65,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldSkipWhenUsernameIsNull() throws Exception {
+    void shouldSkipWhenUsernameIsNull() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer token");
         when(jwtService.extractUsername("token")).thenReturn(null);
@@ -75,7 +77,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldSkipUserLoadingWhenAuthenticationAlreadyPresent() throws Exception {
+    void shouldSkipUserLoadingWhenAuthenticationAlreadyPresent() throws ServletException, IOException {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("existing", null, List.of(new SimpleGrantedAuthority("ROLE_USER")))
         );
@@ -90,7 +92,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldSetAuthenticationWhenTokenValid() throws Exception {
+    void shouldSetAuthenticationWhenTokenValid() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer token");
         UserDetails userDetails = org.springframework.security.core.userdetails.User
@@ -110,7 +112,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldNotSetAuthenticationWhenTokenInvalid() throws Exception {
+    void shouldNotSetAuthenticationWhenTokenInvalid() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer token");
         UserDetails userDetails = org.springframework.security.core.userdetails.User

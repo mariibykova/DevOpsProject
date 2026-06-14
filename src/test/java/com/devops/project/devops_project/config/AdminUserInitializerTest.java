@@ -32,7 +32,7 @@ class AdminUserInitializerTest {
     private AdminUserInitializer initializer;
 
     @Test
-    void runShouldCreateAdminWhenUserNotExists() throws Exception {
+    void runShouldCreateAdminWhenUserNotExists() {
         AppAdminProperties props = props();
         initializer = new AdminUserInitializer(userRepository, passwordEncoder, props);
 
@@ -53,7 +53,7 @@ class AdminUserInitializerTest {
     }
 
     @Test
-    void runShouldEnsureAdminRoleAndEnabledForExistingUser() throws Exception {
+    void runShouldEnsureAdminRoleAndEnabledForExistingUser() {
         AppAdminProperties props = props();
         initializer = new AdminUserInitializer(userRepository, passwordEncoder, props);
 
@@ -72,7 +72,7 @@ class AdminUserInitializerTest {
     }
 
     @Test
-    void runShouldNotSaveWhenExistingAlreadyAdminAndEnabled() throws Exception {
+    void runShouldNotSaveWhenExistingAlreadyAdminAndEnabled() {
         AppAdminProperties props = props();
         initializer = new AdminUserInitializer(userRepository, passwordEncoder, props);
 

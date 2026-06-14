@@ -41,7 +41,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleValidationShouldReturnFieldMap() throws Exception {
+    void handleValidationShouldReturnFieldMap() throws NoSuchMethodException {
         Method method = Dummy.class.getDeclaredMethod("register", RegisterRequest.class);
         MethodParameter parameter = new MethodParameter(method, 0);
         BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "request");
