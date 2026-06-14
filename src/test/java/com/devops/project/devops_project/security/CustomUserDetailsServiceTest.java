@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -69,6 +70,6 @@ class CustomUserDetailsServiceTest {
         UsernameNotFoundException ex = assertThrows(UsernameNotFoundException.class,
                 () -> customUserDetailsService.loadUserByUsername("none@example.com"));
 
-        assertTrue(ex.getMessage().contains("none@example.com"));
+        assertThat(ex.getMessage()).contains("none@example.com");
     }
 }

@@ -20,9 +20,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -71,7 +71,7 @@ class ReviewServiceTest {
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> reviewService.getById(10L));
 
-        assertTrue(ex.getMessage().contains("Review not found with id=10"));
+        assertThat(ex.getMessage()).contains("Review not found with id=10");
     }
 
     @Test
@@ -106,7 +106,7 @@ class ReviewServiceTest {
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> reviewService.create(request, "user@example.com"));
 
-        assertTrue(ex.getMessage().contains("User not found with email=user@example.com"));
+        assertThat(ex.getMessage()).contains("User not found with email=user@example.com");
     }
 
     @Test
@@ -118,7 +118,7 @@ class ReviewServiceTest {
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> reviewService.create(request, "user@example.com"));
 
-        assertTrue(ex.getMessage().contains("Product not found with id=77"));
+        assertThat(ex.getMessage()).contains("Product not found with id=77");
     }
 
     @Test
@@ -146,7 +146,7 @@ class ReviewServiceTest {
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> reviewService.update(9L, request));
 
-        assertTrue(ex.getMessage().contains("Review not found with id=9"));
+        assertThat(ex.getMessage()).contains("Review not found with id=9");
     }
 
     @Test
@@ -160,7 +160,7 @@ class ReviewServiceTest {
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> reviewService.update(9L, request));
 
-        assertTrue(ex.getMessage().contains("Product not found with id=100"));
+        assertThat(ex.getMessage()).contains("Product not found with id=100");
     }
 
     @Test
@@ -179,7 +179,7 @@ class ReviewServiceTest {
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> reviewService.delete(9L));
 
-        assertTrue(ex.getMessage().contains("Review not found with id=9"));
+        assertThat(ex.getMessage()).contains("Review not found with id=9");
     }
 
     private Review review(Long id, Long userId, Long productId, String title, String body, int rating) {

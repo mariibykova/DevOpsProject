@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> handleNotReadable(
-            HttpMessageNotReadableException ex,
+            HttpMessageNotReadableException ex, //NOSONAR - Spring MVC requires this parameter
             HttpServletRequest request
     ) {
         return buildResponse(
@@ -92,7 +92,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiErrorResponse> handleAuthentication(
-            AuthenticationException ex,
+            AuthenticationException ex, //NOSONAR - Spring MVC requires this parameter
             HttpServletRequest request
     ) {
         return buildResponse(
@@ -105,7 +105,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(
-            Exception ex,
+            Exception ex, //NOSONAR - Spring MVC requires this parameter
             HttpServletRequest request
     ) {
         return buildResponse(

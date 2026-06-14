@@ -17,9 +17,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -71,7 +71,7 @@ class ProductServiceTest {
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> productService.getById(99L));
 
-        assertTrue(exception.getMessage().contains("Product not found with id=99"));
+        assertThat(exception.getMessage()).contains("Product not found with id=99");
     }
 
     @Test
@@ -144,7 +144,7 @@ class ProductServiceTest {
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
                 () -> productService.update(404L, request));
 
-        assertTrue(exception.getMessage().contains("Product not found with id=404"));
+        assertThat(exception.getMessage()).contains("Product not found with id=404");
     }
 
     @Test
@@ -164,7 +164,7 @@ class ProductServiceTest {
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
                 () -> productService.delete(123L));
 
-        assertTrue(exception.getMessage().contains("Product not found with id=123"));
+        assertThat(exception.getMessage()).contains("Product not found with id=123");
     }
 
     private Product product(Long id, String name, String description, String picture, BigDecimal price) {

@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -73,7 +74,7 @@ class UserServiceTest {
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> userService.getById(9L));
 
-        assertTrue(ex.getMessage().contains("User not found with id=9"));
+        assertThat(ex.getMessage()).contains("User not found with id=9");
     }
 
     @Test
@@ -110,7 +111,7 @@ class UserServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertNotNull(reason);
-        assertTrue(reason.contains("Email already exists"));
+        assertThat(reason).contains("Email already exists");
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -167,7 +168,7 @@ class UserServiceTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertNotNull(reason);
-        assertTrue(reason.contains("Old password is incorrect"));
+        assertThat(reason).contains("Old password is incorrect");
         verify(userRepository, never()).save(existing);
     }
 
@@ -199,7 +200,7 @@ class UserServiceTest {
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> userService.findByEmail("none@example.com"));
 
-        assertTrue(ex.getMessage().contains("User not found with email=none@example.com"));
+        assertThat(ex.getMessage()).contains("User not found with email=none@example.com");
     }
 
     private User user(Long id, String name, String email, String password, boolean enabled, Role role) {
