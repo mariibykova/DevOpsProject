@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getProducts, deleteProduct } from '../api/apiClient';
 import ProductForm from './ProductForm';
 
@@ -10,7 +10,7 @@ export default function ProductList({ user }) {
 
   const isAdmin = user?.roles?.includes('ROLE_ADMIN');
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       const data = await getProducts();
       setProducts(data);
@@ -18,14 +18,15 @@ export default function ProductList({ user }) {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
+    const confirmed = window.confirm('Delete this product?');
+    if (!confirmed) return;
     try {
       await deleteProduct(id);
       await loadProducts();

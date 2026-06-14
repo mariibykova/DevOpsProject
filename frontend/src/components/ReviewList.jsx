@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getReviews, deleteReview, getProducts } from '../api/apiClient';
 import ReviewForm from './ReviewForm';
 
@@ -9,7 +9,7 @@ export default function ReviewList({ user }) {
   const [editingReview, setEditingReview] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [reviewsData, productsData] = await Promise.all([getReviews(), getProducts()]);
       setReviews(reviewsData);
@@ -18,14 +18,15 @@ export default function ReviewList({ user }) {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this review?')) return;
+    const confirmed = window.confirm('Delete this review?');
+    if (!confirmed) return;
     try {
       await deleteReview(id);
       await loadData();

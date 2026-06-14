@@ -16,11 +16,15 @@ export default function App() {
     if (savedUser && token) {
       try {
         setUser(JSON.parse(savedUser));
-      } catch {
-        handleLogout();
+      } catch (e) {
+        console.error('Failed to parse saved user, logging out', e);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
       }
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogin = async (email, password) => {
     const data = await apiLogin(email, password);
