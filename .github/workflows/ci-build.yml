@@ -146,7 +146,7 @@ jobs:
   frontend_sonarqube_scan:
     name: SonarQube Frontend Scan
     runs-on: ubuntu-latest
-    needs: frontend_build
+    needs: frontend_test
     defaults:
       run:
         working-directory: frontend
@@ -181,10 +181,13 @@ jobs:
             -Dsonar.projectKey=mariibykova_DevOpsProject_frontend
             -Dsonar.projectName=devops_project_frontend
             -Dsonar.sources=src
+            -Dsonar.exclusions=src/__tests__/**,src/setupTests.js
+            -Dsonar.tests=src/__tests__
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.scm.provider=git
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.qualitygate.wait=false
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 
   sonarqube_scan:
     name: SonarQube Backend Scan
