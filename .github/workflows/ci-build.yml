@@ -146,7 +146,7 @@ jobs:
   frontend_sonarqube_scan:
     name: SonarQube Frontend Scan
     runs-on: ubuntu-latest
-    needs: frontend_test
+    needs: frontend_build
     defaults:
       run:
         working-directory: frontend
