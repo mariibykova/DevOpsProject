@@ -80,14 +80,15 @@ class ReviewServiceTest {
         ReviewCreateRequest request = new ReviewCreateRequest("Great", "Detailed feedback", 5, 77L);
         User user = user(5L, "user@example.com");
         Product product = product(77L);
+        LocalDateTime fixedTs = LocalDateTime.of(2024, 1, 1, 0, 0);
 
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
         when(productRepository.findById(77L)).thenReturn(Optional.of(product));
         when(reviewRepository.save(any(Review.class))).thenAnswer(inv -> {
             Review r = inv.getArgument(0);
             r.setId(501L);
-            r.setCreatedAt(LocalDateTime.now());
-            r.setUpdatedAt(LocalDateTime.now());
+            r.setCreatedAt(fixedTs);
+            r.setUpdatedAt(fixedTs);
             return r;
         });
 

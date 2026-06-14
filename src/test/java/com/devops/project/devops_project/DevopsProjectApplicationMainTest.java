@@ -2,11 +2,13 @@ package com.devops.project.devops_project;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 class DevopsProjectApplicationMainTest {
 
     @Test
     void mainShouldStartApplication() {
-        DevopsProjectApplication.main(new String[]{
+        assertDoesNotThrow(() -> DevopsProjectApplication.main(new String[]{
                 "--spring.main.web-application-type=none",
                 "--spring.main.banner-mode=off",
                 "--spring.main.lazy-initialization=true",
@@ -16,6 +18,6 @@ class DevopsProjectApplicationMainTest {
                 "--app.admin.username=admin",
                 "--app.admin.email=admin@example.com",
                 "--app.admin.password=admin123"
-        });
+        }));
     }
 }

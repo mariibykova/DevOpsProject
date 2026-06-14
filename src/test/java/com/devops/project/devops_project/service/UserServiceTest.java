@@ -162,8 +162,9 @@ class UserServiceTest {
         when(userRepository.findById(3L)).thenReturn(Optional.of(existing));
         when(passwordEncoder.matches("wrong", "old-hash")).thenReturn(false);
 
+        ChangePasswordRequest req = new ChangePasswordRequest("wrong", "newpass123");
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> userService.changePassword(3L, new ChangePasswordRequest("wrong", "newpass123")));
+                () -> userService.changePassword(3L, req));
         String reason = ex.getReason();
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());

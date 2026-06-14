@@ -63,11 +63,13 @@ public class TelegramNotificationService {
 
     public void sendPipelineStatus(String pipelineName, String status, String runId, String details) {
         String message = String.format(
-            "CI/CD Pipeline Status\n\n" +
-            "Pipeline: %s\n" +
-            "Status: %s\n" +
-            "Run ID: %s\n" +
-            "Details: %s",
+            """
+            CI/CD Pipeline Status
+
+            Pipeline: %s
+            Status: %s
+            Run ID: %s
+            Details: %s""",
             pipelineName, status, runId, details
         );
         sendNotification(message);
@@ -75,10 +77,12 @@ public class TelegramNotificationService {
 
     public void sendDeploymentStatus(String environment, String status, String version) {
         String message = String.format(
-            "Deployment Status\n\n" +
-            "Environment: %s\n" +
-            "Status: %s\n" +
-            "Version: %s",
+            """
+            Deployment Status
+
+            Environment: %s
+            Status: %s
+            Version: %s""",
             environment, status, version
         );
         sendNotification(message);
@@ -86,10 +90,12 @@ public class TelegramNotificationService {
 
     public void sendSonarQubeResults(String qualityGate, String coverage, String bugs) {
         String message = String.format(
-            "SonarQube Scan Results\n\n" +
-            "Quality Gate: %s\n" +
-            "Coverage: %s\n" +
-            "Bugs: %s",
+            """
+            SonarQube Scan Results
+
+            Quality Gate: %s
+            Coverage: %s
+            Bugs: %s""",
             qualityGate, coverage, bugs
         );
         sendNotification(message);
