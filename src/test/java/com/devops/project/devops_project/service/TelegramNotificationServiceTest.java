@@ -7,6 +7,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -68,7 +69,7 @@ class TelegramNotificationServiceTest {
     void sendNotificationShouldHandleException() {
         RestTemplate mockRestTemplate = mock(RestTemplate.class);
         when(mockRestTemplate.postForEntity(any(String.class), any(), eq(String.class)))
-                .thenThrow(new RuntimeException("Connection refused"));
+                .thenThrow(new ResourceAccessException("Connection refused"));
 
         ReflectionTestUtils.setField(service, "botToken", "test-token");
         ReflectionTestUtils.setField(service, "chatId", "12345");

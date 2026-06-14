@@ -9,6 +9,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,7 +56,7 @@ public class TelegramNotificationService {
             } else {
                 logger.error("Failed to send Telegram notification: status={}, body={}", response.getStatusCode(), response.getBody());
             }
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             logger.error("Error sending Telegram notification", e);
         }
     }
