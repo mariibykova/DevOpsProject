@@ -5,6 +5,21 @@ import RegisterForm from './components/RegisterForm';
 import ProductList from './components/ProductList';
 import ReviewList from './components/ReviewList';
 
+function sanitizeToken(token) {
+  if (typeof token !== 'string') return null;
+  return token.replace(/[^\w.~+/=-]/g, '');
+}
+
+function sanitizeUser(user) {
+  if (!user || typeof user !== 'object') return null;
+  return {
+    id: Number(user.id) || 0,
+    userName: String(user.userName || '').slice(0, 100),
+    email: String(user.email || '').slice(0, 200),
+    roles: Array.isArray(user.roles) ? user.roles.map((r) => String(r)) : [],
+  };
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -28,18 +43,22 @@ export default function App() {
 
   const handleLogin = async (email, password) => {
     const data = await apiLogin(email, password);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setToken(data.token);
-    setUser(data.user);
+    const safeToken = sanitizeToken(data.token);
+    const safeUser = sanitizeUser(data.user);
+    localStorage.setItem('token', safeToken);
+    localStorage.setItem('user', JSON.stringify(safeUser));
+    setToken(safeToken);
+    setUser(safeUser);
   };
 
   const handleRegister = async (userName, email, password) => {
     const data = await apiRegister(userName, email, password);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setToken(data.token);
-    setUser(data.user);
+    const safeToken = sanitizeToken(data.token);
+    const safeUser = sanitizeUser(data.user);
+    localStorage.setItem('token', safeToken);
+    localStorage.setItem('user', JSON.stringify(safeUser));
+    setToken(safeToken);
+    setUser(safeUser);
   };
 
   const handleLogout = () => {

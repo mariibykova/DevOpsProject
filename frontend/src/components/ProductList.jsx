@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { getProducts, deleteProduct } from '../api/apiClient';
 import ProductForm from './ProductForm';
 
-export default function ProductList({ user }) {
+export default function ProductList({ user = null }) {
   const [products, setProducts] = useState([]);
   const [error, setError] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
@@ -25,7 +26,7 @@ export default function ProductList({ user }) {
   }, [loadProducts]);
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm('Delete this product?');
+    const confirmed = globalThis.confirm('Delete this product?');
     if (!confirmed) return;
     try {
       await deleteProduct(id);
@@ -89,3 +90,13 @@ export default function ProductList({ user }) {
     </div>
   );
 }
+
+ProductList.propTypes = {
+  user: PropTypes.shape({
+    id: PropTypes.number,
+    userName: PropTypes.string,
+    email: PropTypes.string,
+    roles: PropTypes.arrayOf(PropTypes.string),
+  }),
+};
+

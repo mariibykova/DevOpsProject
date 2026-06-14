@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { getReviews, deleteReview, getProducts } from '../api/apiClient';
 import ReviewForm from './ReviewForm';
 
-export default function ReviewList({ user }) {
+export default function ReviewList({ user = null }) {
   const [reviews, setReviews] = useState([]);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState('');
@@ -25,7 +26,7 @@ export default function ReviewList({ user }) {
   }, [loadData]);
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm('Delete this review?');
+    const confirmed = globalThis.confirm('Delete this review?');
     if (!confirmed) return;
     try {
       await deleteReview(id);
@@ -100,3 +101,13 @@ export default function ReviewList({ user }) {
     </div>
   );
 }
+
+ReviewList.propTypes = {
+  user: PropTypes.shape({
+    id: PropTypes.number,
+    userName: PropTypes.string,
+    email: PropTypes.string,
+    roles: PropTypes.arrayOf(PropTypes.string),
+  }),
+};
+

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 
 export default function RegisterForm({ onRegister, onSwitchToLogin }) {
   const [userName, setUserName] = useState('');
@@ -62,3 +63,8 @@ export default function RegisterForm({ onRegister, onSwitchToLogin }) {
     </div>
   );
 }
+
+RegisterForm.propTypes = {
+  onRegister: PropTypes.func.isRequired,
+  onSwitchToLogin: PropTypes.func.isRequired,
+};

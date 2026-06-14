@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { createReview, updateReview } from '../api/apiClient';
 
-export default function ReviewForm({ review, products, onClose }) {
+export default function ReviewForm({ review = null, products, onClose }) {
   const isEdit = !!review;
   const [title, setTitle] = useState(review?.title || '');
   const [body, setBody] = useState(review?.body || '');
@@ -12,7 +13,7 @@ export default function ReviewForm({ review, products, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const payload = { title, body, rating: parseInt(rating, 10), productId: parseInt(productId, 10) };
+    const payload = { title, body, rating: Number.parseInt(rating, 10), productId: Number.parseInt(productId, 10) };
     try {
       if (isEdit) {
         await updateReview(review.id, payload);
@@ -84,3 +85,21 @@ export default function ReviewForm({ review, products, onClose }) {
     </div>
   );
 }
+
+ReviewForm.propTypes = {
+  review: PropTypes.shape({
+    id: PropTypes.number,
+    title: PropTypes.string,
+    body: PropTypes.string,
+    rating: PropTypes.number,
+    productId: PropTypes.number,
+  }),
+  products: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      name: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
