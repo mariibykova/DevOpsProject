@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,11 +44,12 @@ class DtoAndModelCoverageTest {
         ProductUpdateRequest productUpdateRequest = new ProductUpdateRequest("Phone", "description description description", "img", new BigDecimal("2.00"));
         RegisterRequest registerRequest = new RegisterRequest("user", "user@example.com", "password123");
         ReviewCreateRequest reviewCreateRequest = new ReviewCreateRequest("t", "b", 5, 1L);
-        ReviewResponse reviewResponse = new ReviewResponse(1L, "t", "b", 5, LocalDateTime.now(), LocalDateTime.now(), 1L, 2L);
+        LocalDateTime fixedTime = LocalDateTime.of(2024, Month.JANUARY, 1, 0, 0);
+        ReviewResponse reviewResponse = new ReviewResponse(1L, "t", "b", 5, fixedTime, fixedTime, 1L, 2L);
         ReviewUpdateRequest reviewUpdateRequest = new ReviewUpdateRequest("t", "b", 4, 1L);
         UserCreateRequest userCreateRequest = new UserCreateRequest("user", "user@example.com", "password123");
         UserUpdateRequest userUpdateRequest = new UserUpdateRequest("user", "user@example.com");
-        ApiErrorResponse apiErrorResponse = new ApiErrorResponse(LocalDateTime.now(), 400, "Bad Request", "error", "/api", Map.of("field", "msg"));
+        ApiErrorResponse apiErrorResponse = new ApiErrorResponse(fixedTime, 400, "Bad Request", "error", "/api", Map.of("field", "msg"));
 
         assertEquals("token", authResponse.token());
         assertEquals("oldpass12", changePasswordRequest.oldPassword());
@@ -96,8 +98,9 @@ class DtoAndModelCoverageTest {
         review.setRating(5);
         review.setUser(user);
         review.setProduct(product);
-        review.setCreatedAt(java.time.LocalDateTime.now());
-        review.setUpdatedAt(java.time.LocalDateTime.now());
+        LocalDateTime fixedTs = LocalDateTime.of(2024, Month.JANUARY, 1, 0, 0);
+        review.setCreatedAt(fixedTs);
+        review.setUpdatedAt(fixedTs);
 
         assertEquals(10L, review.getId());
         assertEquals("Great Product", review.getTitle());

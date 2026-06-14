@@ -56,6 +56,9 @@ jobs:
       - name: Build backend for SonarQube
         run: mvn -B test-compile -DskipTests
 
+      - name: Copy dependencies for SonarQube analysis
+        run: mvn -B dependency:copy-dependencies -DoutputDirectory=target/dependency -DskipTests
+
       - name: SonarCloud Scan for Backend
         uses: sonarsource/sonarcloud-github-action@v3
         env:
@@ -71,9 +74,8 @@ jobs:
             -Dsonar.tests=src/test/java
             -Dsonar.java.binaries=target/classes
             -Dsonar.java.test.binaries=target/test-classes
+            -Dsonar.java.libraries=target/dependency/*.jar
             -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.java.coveragePlugin=jacoco
-            -Dsonar.jacoco.reportPaths=target/jacoco.exec
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
             -Dsonar.test.inclusions=src/test/java/**/*Test.java
             -Dsonar.scm.provider=git

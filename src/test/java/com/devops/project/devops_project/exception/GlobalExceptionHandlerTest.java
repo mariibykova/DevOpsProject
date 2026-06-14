@@ -145,6 +145,7 @@ class GlobalExceptionHandlerTest {
 
     static class Dummy {
         void register(RegisterRequest request) {
+            // intentionally empty - used only to trigger MethodArgumentNotValidException via reflection
         }
     }
 }

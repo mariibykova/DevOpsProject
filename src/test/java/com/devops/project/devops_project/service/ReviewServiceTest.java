@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Optional;
 
@@ -183,13 +184,14 @@ class ReviewServiceTest {
     }
 
     private Review review(Long id, Long userId, Long productId, String title, String body, int rating) {
+        LocalDateTime fixedTime = LocalDateTime.of(2024, Month.JANUARY, 1, 0, 0);
         Review review = new Review();
         review.setId(id);
         review.setTitle(title);
         review.setBody(body);
         review.setRating(rating);
-        review.setCreatedAt(LocalDateTime.now());
-        review.setUpdatedAt(LocalDateTime.now());
+        review.setCreatedAt(fixedTime);
+        review.setUpdatedAt(fixedTime);
         review.setUser(user(userId, "u" + userId + "@example.com"));
         review.setProduct(product(productId));
         return review;

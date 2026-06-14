@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -123,7 +124,7 @@ public class GlobalExceptionHandler {
             Map<String, String> validationErrors
     ) {
         ApiErrorResponse body = new ApiErrorResponse(
-                LocalDateTime.now(),
+                LocalDateTime.now(ZoneOffset.UTC),
                 status.value(),
                 status.getReasonPhrase(),
                 message,

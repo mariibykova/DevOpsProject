@@ -13,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,6 +76,7 @@ class ReviewControllerTest {
     }
 
     private ReviewResponse response() {
-        return new ReviewResponse(1L, "t", "b", 5, LocalDateTime.now(), LocalDateTime.now(), 5L, 7L);
+        LocalDateTime fixedTime = LocalDateTime.of(2024, Month.JANUARY, 1, 0, 0);
+        return new ReviewResponse(1L, "t", "b", 5, fixedTime, fixedTime, 5L, 7L);
     }
 }
