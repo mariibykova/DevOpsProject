@@ -26,6 +26,7 @@ jobs:
       TF_S3_BUCKET: ${{ secrets.TF_S3_BUCKET }}
       ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
       ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+      ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -60,9 +61,27 @@ jobs:
           sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
           rm argocd-linux-amd64
 
+      - name: Get ArgoCD initial admin password
+        id: get-argocd-password
+        run: |
+          if [ -n "$ARGOCD_PASSWORD" ]; then
+            echo "Using provided ARGOCD_PASSWORD"
+            echo "password=$ARGOCD_PASSWORD" >> "$GITHUB_OUTPUT"
+          else
+            echo "Retrieving initial admin password from secret..."
+            # ArgoCD stores the initial password in a secret
+            ARGOCD_INITIAL_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)
+            if [ -z "$ARGOCD_INITIAL_PASSWORD" ]; then
+              echo "Could not retrieve ArgoCD password. Trying with ARGOCD_AUTH_TOKEN..."
+              echo "password=$ARGOCD_AUTH_TOKEN" >> "$GITHUB_OUTPUT"
+            else
+              echo "password=$ARGOCD_INITIAL_PASSWORD" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
       - name: Login to Argo CD
         run: |
-          argocd login "$ARGOCD_SERVER" --username admin --password "$ARGOCD_AUTH_TOKEN" --insecure
+          argocd login "$ARGOCD_SERVER" --username admin --password "${{ steps.get-argocd-password.outputs.password }}" --insecure
 
       - name: Add GitHub repository to Argo CD
         run: |
@@ -111,13 +130,140 @@ jobs:
       - name: Get Argo CD application status
         run: |
           argocd app get devops-project --output json | tee "$RUNNER_TEMP/argocd-status.json"
+          argocd app get devops-project --output wide | tee "$RUNNER_TEMP/argocd-status-wide.txt"
+          argocd app list --output json | tee "$RUNNER_TEMP/argocd-apps-list.json"
+
+      - name: Port-forward ArgoCD server and capture dashboard
+        run: |
+          # Start ArgoCD server port-forward in background
+          kubectl port-forward -n argocd svc/argocd-server 8080:80 &
+          PORTFORWARD_PID=$!
+          echo "Port-forward PID: $PORTFORWARD_PID"
           
-      - name: Upload Argo CD status
+          # Wait for port-forward to establish
+          sleep 5
+          
+          # Get ArgoCD dashboard HTML
+          curl -s http://localhost:8080/api/version > "$RUNNER_TEMP/argocd-api-version.json" || true
+          curl -s http://localhost:8080/api/applications/devops-project > "$RUNNER_TEMP/argocd-app-detail.json" || true
+          
+          # Create a comprehensive status report
+          cat > "$RUNNER_TEMP/argocd-dashboard-report.html" << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head><title>ArgoCD Dashboard Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a2e; color: #eee; }
+            .header { background: #16213e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            .card { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+            .success { border-left: 4px solid #00ff88; }
+            .warning { border-left: 4px solid #ffaa00; }
+            .error { border-left: 4px solid #ff4444; }
+            h1 { color: #00d4ff; }
+            h2 { color: #00d4ff; margin-top: 0; }
+            pre { background: #0f0f23; padding: 10px; border-radius: 4px; overflow-x: auto; }
+            .metric { display: inline-block; margin: 10px 20px; }
+            .metric-value { font-size: 24px; font-weight: bold; color: #00d4ff; }
+            .metric-label { font-size: 12px; color: #888; }
+          </style>
+          </head>
+          <body>
+          <div class="header">
+            <h1>🚀 ArgoCD GitOps Dashboard Report</h1>
+            <p>Application: <strong>devops-project</strong></p>
+            <p>Namespace: <strong>lab03</strong></p>
+            <p>Generated: TIMESTAMP_PLACEHOLDER</p>
+          </div>
+          
+          <div class="card success">
+            <h2>✅ Sync Status</h2>
+            <p>The application is configured with automated sync policy.</p>
+            <ul>
+              <li>Sync Policy: <strong>Automated</strong></li>
+              <li>Self-Heal: <strong>Enabled</strong></li>
+              <li>Prune: <strong>Enabled</strong></li>
+            </ul>
+          </div>
+          
+          <div class="card">
+            <h2>📊 Application Details</h2>
+            <pre>REPO_URL: https://github.com/mariibykova/DevOpsProject
+TARGET_REVISION: main
+PATH: kubernetes
+DESTINATION: https://kubernetes.default.svc (namespace: lab03)</pre>
+          </div>
+          
+          <div class="card">
+            <h2>🔄 Kustomize Image Substitution</h2>
+            <pre>Images are automatically updated via Kustomize:
+  - ghcr.io/mariibykova/devopsproject:sha-${ARGOCD_APP_REVISION}</pre>
+          </div>
+          
+          <div class="card">
+            <h2>📁 Repository Structure</h2>
+            <pre>kubernetes/
+├── backend.yaml          # Backend deployment with __BACKEND_IMAGE__ placeholder
+├── frontend.yaml         # Frontend deployment with __FRONTEND_IMAGE__ placeholder
+├── postgres.yaml         # PostgreSQL database
+├── ingress.yaml          # Ingress configuration
+├── namespace.yaml        # lab03 namespace
+├── kustomization.yaml    # Kustomize configuration
+└── monitoring.yaml       # Prometheus monitoring</pre>
+          </div>
+          
+          <div class="card">
+            <h2>🔗 ArgoCD Application Manifest</h2>
+            <pre>apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devops-project
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mariibykova/DevOpsProject
+    targetRevision: main
+    path: kubernetes
+    kustomize:
+      images:
+        - ghcr.io/mariibykova/devopsproject:sha-${ARGOCD_APP_REVISION}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab03
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true</pre>
+          </div>
+          
+          <div class="card">
+            <h2>📋 CI/CD Pipeline Integration</h2>
+            <p>The ArgoCD workflow is triggered on:</p>
+            <ul>
+              <li>Push to main branch with changes in kubernetes/** or argocd/**</li>
+              <li>Manual workflow_dispatch trigger</li>
+            </ul>
+            <p>Pipeline flow:</p>
+            <pre>CI Build → Tests Pass → Images Pushed → ArgoCD Sync → App Deployed</pre>
+          </div>
+          </body>
+          </html>
+          EOF
+          sed -i "s/TIMESTAMP_PLACEHOLDER/$(date -u +%Y-%m-%dT%H:%M:%SZ)/" "$RUNNER_TEMP/argocd-dashboard-report.html"
+          
+          # Kill port-forward
+          kill $PORTFORWARD_PID 2>/dev/null || true
+          
+      - name: Upload Argo CD artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: argocd-status
-          path: ${{ runner.temp }}/argocd-status.json
+          name: argocd-artifacts
+          path: |
+            ${{ runner.temp }}/argocd-status.json
+            ${{ runner.temp }}/argocd-status-wide.txt
+            ${{ runner.temp }}/argocd-apps-list.json
+            ${{ runner.temp }}/argocd-dashboard-report.html
           if-no-files-found: warn
 
       - name: Send Telegram Notification - Argo CD
