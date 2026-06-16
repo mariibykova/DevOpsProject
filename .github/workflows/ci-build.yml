@@ -540,6 +540,8 @@ jobs:
       - name: Install ArgoCD
         run: |
           kubectl apply -n argocd -f argocd/install.yaml
+          # Wait for ArgoCD CRDs to be established before applying Application
+          kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
           kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
       - name: Apply ArgoCD Application manifest
