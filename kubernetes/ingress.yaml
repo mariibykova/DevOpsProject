@@ -33,7 +33,7 @@ spec:
                   number: 3000
 ---
 # ArgoCD Ingress - accessible via nip.io free DNS
-# URL: http://argocd.147.45.234.49.nip.io
+# URL: http://argocd.72.56.25.248.nip.io
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -46,7 +46,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: argocd.147.45.234.49.nip.io
+    - host: argocd.72.56.25.248.nip.io
       http:
         paths:
           - path: /
