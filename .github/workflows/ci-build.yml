@@ -505,36 +505,25 @@ jobs:
         if: ${{ steps.storage.outputs.use_static_pv == 'true' }}
         run: kubectl apply -f kubernetes/postgres-pv.yaml
 
-      - name: Recreate PVC if storageClassName changed
+      - name: Recreate pending PVC without storage class
         run: |
-          CURRENT_SC=$(kubectl -n lab03 get pvc postgres-pvc -o jsonpath='{.spec.storageClassName}' 2>/dev/null || true)
+          CURRENT_PHASE=$(kubectl -n lab03 get pvc postgres-data-postgres-0 -o jsonpath='{.status.phase}' 2>/dev/null || true)
+          CURRENT_SC=$(kubectl -n lab03 get pvc postgres-data-postgres-0 -o jsonpath='{.spec.storageClassName}' 2>/dev/null || true)
           if [ "$CURRENT_SC" = "<no value>" ]; then
             CURRENT_SC=""
           fi
-          # If PVC exists with storageClassName "manual", delete PVC + PV so they can be recreated
-          # (PV with Retain policy goes "Released" after PVC delete and can't rebind — must delete PV too)
-          if [ -n "$CURRENT_SC" ]; then
-            echo "Deleting pvc/postgres-pvc and pv/postgres-pv (storageClassName=$CURRENT_SC) to recreate"
-            kubectl -n lab03 scale deployment/postgres --replicas=0 --ignore-not-found=true || true
-            kubectl -n lab03 delete pod -l app=postgres --ignore-not-found=true || true
-            sleep 5
-            kubectl -n lab03 delete pvc postgres-pvc --ignore-not-found=true || true
-            kubectl delete pv postgres-pv --ignore-not-found=true || true
-            kubectl wait --for=delete pv/postgres-pv --timeout=60s 2>/dev/null || true
-            echo "PVC and PV deleted. Recreating PV..."
-            kubectl apply -f kubernetes/postgres-pv.yaml
+          if [ "$CURRENT_PHASE" = "Pending" ] && [ "$CURRENT_SC" != "$POSTGRES_STORAGE_CLASS" ]; then
+            echo "Deleting pending pvc/postgres-data-postgres-0 (phase=$CURRENT_PHASE, storageClassName=$CURRENT_SC)"
+            kubectl -n lab03 delete pvc postgres-data-postgres-0 --ignore-not-found=true
           fi
 
       - name: Apply postgres manifests
         run: |
           kubectl apply -f kubernetes/frontend-nginx-config.yaml
-          kubectl apply -f kubernetes/postgres.yaml
-
-      - name: Wait for postgres PVC to bind
-        run: kubectl -n lab03 wait --for=jsonpath='{.status.phase}'=Bound pvc/postgres-pvc --timeout=180s
+          sed "s|__POSTGRES_STORAGE_CLASS__|$POSTGRES_STORAGE_CLASS|g" kubernetes/postgres.yaml | kubectl apply -f -
 
       - name: Wait for postgres rollout
-        run: kubectl -n lab03 rollout status deployment/postgres --timeout=360s
+        run: kubectl -n lab03 wait --for=condition=Ready pod/postgres-0 --timeout=180s
 
       - name: Apply backend and frontend manifests
         run: |
@@ -568,11 +557,11 @@ jobs:
       - name: Kubernetes diagnostics on failure
         if: failure()
         run: |
-          kubectl -n lab03 get pvc,pods,deploy,svc -o wide || true
-          kubectl -n lab03 describe pvc postgres-pvc || true
-          kubectl -n lab03 describe deployment postgres || true
+          kubectl -n lab03 get pvc,pods,statefulset,deploy,svc -o wide || true
+          kubectl -n lab03 describe pvc postgres-data-postgres-0 || true
+          kubectl -n lab03 describe statefulset postgres || true
           kubectl -n lab03 describe pod -l app=postgres || true
-          kubectl -n lab03 logs deployment/postgres --all-containers=true --tail=200 || true
+          kubectl -n lab03 logs pod/postgres-0 --all-containers=true --tail=200 || true
           kubectl -n lab03 get events --sort-by=.lastTimestamp | tail -n 100 || true
 
       - name: Show services
