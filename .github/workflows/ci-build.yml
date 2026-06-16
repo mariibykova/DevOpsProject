@@ -545,7 +545,10 @@ jobs:
 
       - name: Install ArgoCD
         run: |
+          # Create argocd namespace first so argocd-ingress can be applied
           kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+          # Re-apply ingress.yaml now that argocd namespace exists (first apply skips argocd ingress due to missing ns)
+          kubectl apply -f kubernetes/ingress.yaml
           kubectl apply -n argocd -f argocd/install.yaml
           kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
