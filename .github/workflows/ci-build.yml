@@ -539,8 +539,12 @@ jobs:
 
       - name: Install ArgoCD
         run: |
-          # Install official ArgoCD (includes CRDs + all components)
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          # Remove old minimal ArgoCD deployments to avoid immutable selector conflict
+          kubectl -n argocd delete deployment argocd-server --ignore-not-found=true || true
+          kubectl -n argocd delete statefulset argocd-application-controller --ignore-not-found=true || true
+          # Use --server-side to avoid "metadata.annotations: Too long" on large CRDs
+          kubectl apply --server-side -n argocd \
+            -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
           # Patch argocd-server to run in --insecure mode (no TLS, HTTP only)
           kubectl -n argocd patch deployment argocd-server \
             --type=json \
