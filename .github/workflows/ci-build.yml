@@ -511,13 +511,18 @@ jobs:
           if [ "$CURRENT_SC" = "<no value>" ]; then
             CURRENT_SC=""
           fi
-          # If PVC exists with a non-empty storageClassName (e.g. "manual"), delete it so it can be recreated without one
+          # If PVC exists with storageClassName "manual", delete PVC + PV so they can be recreated
+          # (PV with Retain policy goes "Released" after PVC delete and can't rebind — must delete PV too)
           if [ -n "$CURRENT_SC" ]; then
-            echo "Deleting pvc/postgres-pvc with storageClassName=$CURRENT_SC to recreate without storageClassName"
-            kubectl -n lab03 delete pvc postgres-pvc --ignore-not-found=true
-            # Wait for postgres pod to terminate before PVC can be deleted
-            kubectl -n lab03 delete pod -l app=postgres --ignore-not-found=true
+            echo "Deleting pvc/postgres-pvc and pv/postgres-pv (storageClassName=$CURRENT_SC) to recreate"
+            kubectl -n lab03 scale deployment/postgres --replicas=0 --ignore-not-found=true || true
+            kubectl -n lab03 delete pod -l app=postgres --ignore-not-found=true || true
             sleep 5
+            kubectl -n lab03 delete pvc postgres-pvc --ignore-not-found=true || true
+            kubectl delete pv postgres-pv --ignore-not-found=true || true
+            kubectl wait --for=delete pv/postgres-pv --timeout=60s 2>/dev/null || true
+            echo "PVC and PV deleted. Recreating PV..."
+            kubectl apply -f kubernetes/postgres-pv.yaml
           fi
 
       - name: Apply postgres manifests
