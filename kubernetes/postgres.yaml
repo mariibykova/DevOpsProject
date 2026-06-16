@@ -61,7 +61,7 @@ spec:
     - metadata:
         name: postgres-data
       spec:
-        storageClassName: __POSTGRES_STORAGE_CLASS__
+        storageClassName: manual
         accessModes:
           - ReadWriteOnce
         resources:

@@ -505,28 +505,28 @@ jobs:
         if: ${{ steps.storage.outputs.use_static_pv == 'true' }}
         run: kubectl apply -f kubernetes/postgres-pv.yaml
 
-      - name: Recreate pending PVC without storage class
+      - name: Recreate pending PVC if needed
         run: |
           CURRENT_PHASE=$(kubectl -n lab03 get pvc postgres-data-postgres-0 -o jsonpath='{.status.phase}' 2>/dev/null || true)
-          CURRENT_SC=$(kubectl -n lab03 get pvc postgres-data-postgres-0 -o jsonpath='{.spec.storageClassName}' 2>/dev/null || true)
-          if [ "$CURRENT_SC" = "<no value>" ]; then
-            CURRENT_SC=""
-          fi
-          if [ "$CURRENT_PHASE" = "Pending" ] && [ "$CURRENT_SC" != "$POSTGRES_STORAGE_CLASS" ]; then
-            echo "Deleting pending pvc/postgres-data-postgres-0 (phase=$CURRENT_PHASE, storageClassName=$CURRENT_SC)"
+          if [ "$CURRENT_PHASE" = "Pending" ]; then
+            echo "Deleting pending pvc/postgres-data-postgres-0"
             kubectl -n lab03 delete pvc postgres-data-postgres-0 --ignore-not-found=true
           fi
 
       - name: Apply postgres manifests
         run: |
           kubectl apply -f kubernetes/frontend-nginx-config.yaml
-          sed "s|__POSTGRES_STORAGE_CLASS__|$POSTGRES_STORAGE_CLASS|g" kubernetes/postgres.yaml | kubectl apply -f -
+          # Delete old Deployment if it still exists (migrated to StatefulSet)
+          kubectl -n lab03 delete deployment/postgres --ignore-not-found=true || true
+          kubectl apply -f kubernetes/postgres.yaml
 
       - name: Wait for postgres rollout
         run: kubectl -n lab03 wait --for=condition=Ready pod/postgres-0 --timeout=180s
 
       - name: Apply backend and frontend manifests
         run: |
+          # Create argocd namespace early so argocd-ingress can be applied in ingress.yaml
+          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
           REPO_LOWER="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
           BACKEND_IMAGE="ghcr.io/${REPO_LOWER}:sha-${{ github.sha }}"
           FRONTEND_IMAGE="ghcr.io/${REPO_LOWER}:frontend-sha-${{ github.sha }}"
@@ -539,10 +539,6 @@ jobs:
 
       - name: Install ArgoCD
         run: |
-          # Create argocd namespace first so argocd-ingress can be applied
-          kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-          # Re-apply ingress.yaml now that argocd namespace exists (first apply skips argocd ingress due to missing ns)
-          kubectl apply -f kubernetes/ingress.yaml
           kubectl apply -n argocd -f argocd/install.yaml
           kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
 
