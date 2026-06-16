@@ -60,7 +60,7 @@ variable "high_availability" {
 variable "ingress_enabled" {
   description = "Создавать встроенный ingress для кластера."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "master_preset_id" {
