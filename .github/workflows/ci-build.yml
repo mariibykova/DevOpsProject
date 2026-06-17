@@ -554,6 +554,8 @@ jobs:
           # Wait for ArgoCD CRDs to be established
           kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
           kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=60s
+          # Delete NetworkPolicies - they block inter-component traffic when CNI doesn't support them
+          kubectl -n argocd delete networkpolicy --all --ignore-not-found=true || true
           # Wait for ALL ArgoCD components to be ready before applying Application
           # (repo-server on :8081 must be up before ArgoCD can generate manifests)
           kubectl -n argocd rollout status deployment/argocd-repo-server --timeout=300s
