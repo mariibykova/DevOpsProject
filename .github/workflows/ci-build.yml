@@ -543,7 +543,8 @@ jobs:
           kubectl -n argocd delete deployment argocd-server --ignore-not-found=true || true
           kubectl -n argocd delete statefulset argocd-application-controller --ignore-not-found=true || true
           # Use --server-side to avoid "metadata.annotations: Too long" on large CRDs
-          kubectl apply --server-side -n argocd \
+          # --force-conflicts overrides field manager conflicts from previous client-side apply
+          kubectl apply --server-side --force-conflicts -n argocd \
             -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
           # Patch argocd-server to run in --insecure mode (no TLS, HTTP only)
           kubectl -n argocd patch deployment argocd-server \
