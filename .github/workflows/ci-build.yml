@@ -554,8 +554,13 @@ jobs:
           # Wait for ArgoCD CRDs to be established
           kubectl wait --for=condition=Established crd/applications.argoproj.io --timeout=120s
           kubectl wait --for=condition=Established crd/appprojects.argoproj.io --timeout=60s
-          # Wait for argocd-server to be ready
+          # Wait for ALL ArgoCD components to be ready before applying Application
+          # (repo-server on :8081 must be up before ArgoCD can generate manifests)
+          kubectl -n argocd rollout status deployment/argocd-repo-server --timeout=300s
           kubectl -n argocd rollout status deployment/argocd-server --timeout=300s
+          kubectl -n argocd rollout status deployment/argocd-applicationset-controller --timeout=180s || true
+          kubectl -n argocd rollout status deployment/argocd-dex-server --timeout=120s || true
+          kubectl -n argocd rollout status deployment/argocd-redis --timeout=120s || true
 
       - name: Apply ArgoCD Application manifest
         run: kubectl apply -f argocd/application.yaml
