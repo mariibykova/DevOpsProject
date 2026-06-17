@@ -5,6 +5,7 @@ metadata:
   namespace: lab03
 spec:
   replicas: 1
+  progressDeadlineSeconds: 900
   selector:
     matchLabels:
       app: app

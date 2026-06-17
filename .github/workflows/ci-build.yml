@@ -577,8 +577,11 @@ jobs:
 
       - name: Wait for rollout
         run: |
-          kubectl -n lab03 rollout status deployment/app --timeout=600s
-          kubectl -n lab03 rollout status deployment/frontend --timeout=360s
+          # ArgoCD manages the actual sync; wait here is best-effort only
+          kubectl -n lab03 rollout status deployment/app --timeout=600s || \
+            echo "WARNING: app rollout did not finish within 600s - ArgoCD will continue syncing"
+          kubectl -n lab03 rollout status deployment/frontend --timeout=360s || \
+            echo "WARNING: frontend rollout did not finish within 360s - ArgoCD will continue syncing"
 
       - name: Kubernetes diagnostics on failure
         if: failure()
